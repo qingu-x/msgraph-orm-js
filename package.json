@@ -1,0 +1,74 @@
+{
+  "name": "@qingu-x/npmjs-template",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Qingu npmjs template",
+  "main": "lib/bundle.cjs.js",
+  "module": "lib/bundle.esm.js",
+  "browser": "lib/bundle.browser.js",
+  "types": "types/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qingu-x/npmjs-template.git"
+  },
+  "files": [
+    "src",
+    "types",
+    "lib"
+  ],
+  "scripts": {
+    "test": "jest",
+    "commit": "cz",
+    "build": "rollup -c",
+    "build:types": "tsc",
+    "prepare": "husky",
+    "release": "standard-version",
+    "version": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0 && git add CHANGELOG.md"
+  },
+  "keywords": [
+    "template",
+    "sdk",
+    "npmjs",
+    "npm",
+    "qingu",
+    "qingu-x"
+  ],
+  "author": "QingU Inc.",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/qingu-x/npmjs-template/issues"
+  },
+  "homepage": "https://github.com/qingu-x/npmjs-template#readme",
+  "dependencies": {
+    "debug": "^4.4.1",
+    "ky": "^1.8.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@eslint/css": "^0.9.0",
+    "@eslint/js": "^9.29.0",
+    "@eslint/json": "^0.12.0",
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-replace": "^6.0.2",
+    "@rollup/plugin-typescript": "^12.1.3",
+    "@types/jest": "^30.0.0",
+    "commitlint": "^19.8.1",
+    "cz-conventional-changelog": "^3.3.0",
+    "eslint": "^9.29.0",
+    "husky": "^9.1.7",
+    "jest": "^30.0.2",
+    "rollup": "^3.29.5",
+    "ts-jest": "^29.4.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.34.1"
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  }
+}
