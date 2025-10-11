@@ -1,15 +1,15 @@
 {
-  "name": "@qingu-x/npmjs-template",
-  "version": "0.0.0",
+  "name": "@qingu-x/msgraph-orm-js",
+  "version": "0.0.1",
   "type": "module",
-  "description": "Qingu npmjs template",
+  "description": "Microsoft Graph JavaScript SDK for Qingu-X",
   "main": "lib/bundle.cjs.js",
   "module": "lib/bundle.esm.js",
   "browser": "lib/bundle.browser.js",
   "types": "types/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/qingu-x/npmjs-template.git"
+    "url": "git+https://github.com/qingu-x/msgraph-orm-js.git"
   },
   "files": [
     "src",
@@ -31,15 +31,19 @@
     "npmjs",
     "npm",
     "qingu",
-    "qingu-x"
+    "qingu-x",
+    "msgraph",
+    "meeting"
   ],
   "author": "QingU Inc.",
-  "license": "MIT",
+  "license": "ISC",
   "bugs": {
-    "url": "https://github.com/qingu-x/npmjs-template/issues"
+    "url": "https://github.com/qingu-x/msgraph-orm-js/issues"
   },
-  "homepage": "https://github.com/qingu-x/npmjs-template#readme",
+  "homepage": "https://github.com/qingu-x/msgraph-orm-js#readme",
   "dependencies": {
+    "@azure/identity": "^4.13.0",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
     "debug": "^4.4.1",
     "ky": "^1.8.1"
   },
@@ -49,6 +53,7 @@
     "@eslint/css": "^0.9.0",
     "@eslint/js": "^9.29.0",
     "@eslint/json": "^0.12.0",
+    "@microsoft/microsoft-graph-types": "^2.43.1",
     "@rollup/plugin-commonjs": "^28.0.6",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.1",

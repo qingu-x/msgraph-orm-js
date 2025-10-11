@@ -9,7 +9,7 @@ import json from '@rollup/plugin-json';
 // 一段自定义的内容，以下内容会添加到打包结果中
 const footer = `
 if(typeof window !== 'undefined') {
-  window._NPMJS_TEMPLATE_VERSION_ = '${pkg.version}'
+  window._msgraph_orm_js_version_ = '${pkg.version}'
 }`
 
 export default [
@@ -20,18 +20,21 @@ export default [
       {
         file: pkg.main,
         format: 'cjs',
-        footer
+        footer,
+        inlineDynamicImports: true
       },
       {
         file: pkg.module,
         format: 'esm',
-        footer
+        footer,
+        inlineDynamicImports: true
       },
       {
         file: pkg.browser,
         format: 'umd',
-        name: 'NPMJS_TEMPLATE',
-        footer
+        name: 'MSGRAPH_ORM_JS',
+        footer,
+        inlineDynamicImports: true
       }
     ],
     plugins: [
