@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
 import dts from 'vite-plugin-dts'
+import { builtinModules } from 'module'
 
 export default defineConfig({
   build: {
@@ -17,13 +18,29 @@ export default defineConfig({
     },
     outDir: 'lib',
     rollupOptions: {
-      external: [
-        '@azure/identity',
-        '@microsoft/microsoft-graph-client',
-        '@microsoft/microsoft-graph-types',
-        'ky',
-        'debug'
-      ],
+      external: (id, parentId, isResolved) => {
+        // NPM 包始终为外部依赖
+        const npmExternals = [
+          '@azure/identity',
+          '@microsoft/microsoft-graph-client',
+          '@microsoft/microsoft-graph-types',
+          'ky',
+          'debug'
+        ]
+        
+        if (npmExternals.some(pkg => id === pkg || id.startsWith(pkg + '/'))) {
+          return true
+        }
+        
+        // Node.js 内置模块为外部依赖（ESM 和 CJS 格式）
+        // 检查是否为 Node.js 内置模块
+        const nodeBuiltins = builtinModules
+        if (nodeBuiltins.includes(id) || nodeBuiltins.includes(id.replace(/^node:/, ''))) {
+          return true
+        }
+        
+        return false
+      },
       output: {
         globals: {
           '@azure/identity': 'AzureIdentity',

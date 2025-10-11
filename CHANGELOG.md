@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### 📝 Documentation
 
-* **npm:** sOP about npm release & publish ([f51a139](https://github.com/qingu-x/msgraph-orm-js/commit/f51a13911a9bea373c14f1fdef84752793849fe0))
+* **npm:** SOP about npm release & publish ([f51a139](https://github.com/qingu-x/msgraph-orm-js/commit/f51a13911a9bea373c14f1fdef84752793849fe0))
 
 ### [0.0.3](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.2...v0.0.3) (2025-10-11)
 
