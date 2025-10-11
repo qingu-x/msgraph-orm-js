@@ -270,15 +270,15 @@ const files = await orm.searchFiles('财务报告', 10);
 
 ## 📝 文档
 
-> 💡 **提示**: 查看 [文档索引](./DOCS_INDEX.md) 快速找到你需要的文档！
+> 💡 **提示**: 查看 [文档索引](./docs/DOCS_INDEX.md) 快速找到你需要的文档！
 
-- [📑 文档索引](./DOCS_INDEX.md) - 所有文档的导航和说明
-- [🎓 快速开始指南](./GRAPH_ORM_GUIDE.md) - ORM 使用教程
-- [💡 完整示例](./EXAMPLES.md) - 各种场景的代码示例
-- [📘 API 参考](./GRAPH_API_REFERENCE.md) - 所有 API 端点说明
-- [✅ API 覆盖率](./API_COVERAGE.md) - 接口实现情况
-- [📝 更新日志](./CHANGELOG.md) - 版本更新记录
-- [🎯 实施总结](./IMPLEMENTATION_SUMMARY.md) - 完整实施报告
+- [📑 文档索引](./docs/DOCS_INDEX.md) - 所有文档的导航和说明
+- [🎓 快速开始指南](./docs/GRAPH_ORM_GUIDE.md) - ORM 使用教程
+- [💡 完整示例](./docs/EXAMPLES.md) - 各种场景的代码示例
+- [📘 API 参考](./docs/GRAPH_API_REFERENCE.md) - 所有 API 端点说明
+- [✅ API 覆盖率](./docs/API_COVERAGE.md) - 接口实现情况
+- [📝 更新日志](./docs/CHANGELOG.md) - 版本更新记录
+- [🎯 实施总结](./docs/IMPLEMENTATION_SUMMARY.md) - 完整实施报告
 
 ## 🔐 权限说明
 
@@ -362,9 +362,71 @@ try {
 }
 ```
 
+## 🛠️ 开发
+
+### 构建
+
+本项目使用 Vite 进行打包，支持 ESM、CJS 和 UMD 三种格式：
+
+```bash
+# 安装依赖
+npm install
+
+# 构建项目
+npm run build
+
+# 监听模式构建
+npm run build:watch
+
+# 运行测试
+npm test
+```
+
+### 构建产物
+
+- `lib/bundle.esm.js` - ES Module 格式（推荐用于现代项目）
+- `lib/bundle.cjs.js` - CommonJS 格式（Node.js 兼容）
+- `lib/bundle.browser.js` - UMD 格式（浏览器直接使用）
+- `types/` - TypeScript 类型声明文件
+
+### 发布到 NPM
+
+```bash
+# 1. 更新版本号（自动更新 CHANGELOG）
+npm run release
+
+# 2. 推送到 Git 仓库
+git push --follow-tags origin main
+
+# 3. 发布到 NPM（构建会自动执行）
+npm publish --access public
+
+# 或者使用 npm version 手动管理版本
+npm version patch  # 修订版本：0.0.1 -> 0.0.2
+npm version minor  # 次版本：0.0.1 -> 0.1.0
+npm version major  # 主版本：0.0.1 -> 1.0.0
+```
+
+### 技术栈
+
+- **构建工具**: Vite 7.x
+- **语言**: TypeScript 5.x
+- **测试框架**: Jest
+- **代码规范**: ESLint + TypeScript ESLint
+- **版本管理**: Standard Version (遵循语义化版本)
+- **提交规范**: Commitizen + Commitlint (遵循 Angular 规范)
+
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
+
+### 贡献指南
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`npm run commit`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 提交 Pull Request
 
 ## 📄 许可证
 
@@ -380,8 +442,9 @@ MIT License
 ## 💡 支持
 
 如有问题，请：
-1. 查看 [文档](./GRAPH_ORM_GUIDE.md)
-2. 查看 [示例代码](./EXAMPLES.md)
+
+1. 查看 [文档](./docs/DOCS_INDEX.md)
+2. 查看 [示例代码](./docs/EXAMPLES.md)
 3. 提交 [Issue](https://github.com/qingu-x/msgraph-orm-js/issues)
 
 ---

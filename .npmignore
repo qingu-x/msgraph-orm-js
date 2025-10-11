@@ -1,0 +1,53 @@
+# 源代码和配置文件
+src/
+test/
+docs/
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+
+# 配置文件
+.gitignore
+.cursorignore
+.eslintrc.*
+.prettierrc
+.editorconfig
+tsconfig.json
+vite.config.ts
+jest.config.js
+commitlint.config.js
+eslint.config.mjs
+
+# Git 相关
+.git/
+.github/
+.gitattributes
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+
+# 日志和临时文件
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.yarn/
+
+# 依赖目录
+node_modules/
+
+# 锁文件（可选：如果你想让用户使用他们自己的版本）
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# 其他
+.husky/
+

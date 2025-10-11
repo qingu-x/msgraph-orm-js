@@ -52,7 +52,7 @@ msgraph-orm-js/
    - 实现状态和优先级
    - 国家云限制说明
 
-3. **[CHANGELOG.md](../CHANGELOG.md)** - 版本更新日志
+3. **[CHANGELOG.md](./CHANGELOG.md)** - 版本更新日志
    - 版本历史
    - 新增功能列表
    - Bug 修复记录
@@ -62,7 +62,7 @@ msgraph-orm-js/
 
 ### 我想快速开始使用
 
-→ [README.md](./README.md) > 快速开始部分
+→ [README.md](../README.md) > 快速开始部分
 
 ### 我想了解如何查询数据
 
@@ -80,7 +80,7 @@ msgraph-orm-js/
 ### 我想了解权限要求
 
 → [API_COVERAGE.md](./API_COVERAGE.md) > 每个 API 都标注了权限
-→ [README.md](./README.md) > 权限说明章节
+→ [README.md](../README.md) > 权限说明章节
 
 ### 我想在中国版/美国政府版部署
 
@@ -138,7 +138,7 @@ msgraph-orm-js/
 
 ### 如何认证？
 
-→ [README.md](./README.md) > 快速开始
+→ [README.md](../README.md) > 快速开始
 → [EXAMPLES.md](./EXAMPLES.md) > 初始化
 
 ### 如何查询数据？
@@ -154,7 +154,7 @@ msgraph-orm-js/
 ### 如何处理错误？
 
 → [EXAMPLES.md](./EXAMPLES.md) > 错误处理
-→ [README.md](./README.md) > 错误处理
+→ [README.md](../README.md) > 错误处理
 
 ### 如何分页？
 
