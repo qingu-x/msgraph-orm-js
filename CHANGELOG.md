@@ -1,5 +1,13 @@
-# 更新历史 
+# Changelog
 
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+### [0.0.4](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.3...v0.0.4) (2025-10-11)
+
+
+### 📝 Documentation
+
+* **npm:** sOP about npm release & publish ([f51a139](https://github.com/qingu-x/msgraph-orm-js/commit/f51a13911a9bea373c14f1fdef84752793849fe0))
 
 ### [0.0.3](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.2...v0.0.3) (2025-10-11)
 
