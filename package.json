@@ -1,6 +1,6 @@
 {
   "name": "@qingu-x/msgraph-orm-js",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "type": "module",
   "description": "Microsoft Graph JavaScript SDK for Qingu-X",
   "main": "lib/bundle.cjs.js",
@@ -61,6 +61,14 @@
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "debug": "^4.4.1",
     "ky": "^1.8.1"
+  },
+  "peerDependencies": {
+    "https-proxy-agent": "^7.0.0"
+  },
+  "peerDependenciesMeta": {
+    "https-proxy-agent": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",

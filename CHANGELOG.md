@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.5](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.4...v0.0.5) (2025-10-11)
+
+
+### 🐛 Bug Fixes
+
+* **vite:** add builtinModules ([5d1d878](https://github.com/qingu-x/msgraph-orm-js/commit/5d1d8783f3d783e2c812a3906e62023042543071))
+
 ### [0.0.4](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.3...v0.0.4) (2025-10-11)
 
 
