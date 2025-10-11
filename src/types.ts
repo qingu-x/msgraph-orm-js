@@ -4,7 +4,7 @@ export interface Endpoints {
   graph: string;
 }
 
-export const defaultEndpoints: { [key: string]: Endpoints } = {
+export const defaultEndpoints: { [key in 'global' | 'usGCC' | 'usGCCHigh' | 'usDOD' | 'cn']: Endpoints } = {
   global: {
     azure: 'https://portal.azure.com',
     azureAD: 'https://login.microsoftonline.com',
