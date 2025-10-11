@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.6](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.5...v0.0.6) (2025-10-11)
+
+
+### 📝 Documentation
+
+* **all:** rewrite all docs ([5832df7](https://github.com/qingu-x/msgraph-orm-js/commit/5832df736c9e0e87391ed8e1987218a0a81403af))
+
 ### [0.0.5](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.4...v0.0.5) (2025-10-11)
 
 
