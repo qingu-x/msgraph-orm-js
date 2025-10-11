@@ -3,19 +3,18 @@
 [![npm version](https://img.shields.io/npm/v/@qingu-x/msgraph-orm-js.svg)](https://www.npmjs.com/package/@qingu-x/msgraph-orm-js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Microsoft Graph JavaScript/TypeScript SDK 的类 ORM 封装，提供简洁、类型安全的 API 调用方式。
+Microsoft Graph 的类 ORM 封装，提供简洁、类型安全的 API 调用方式。
+
+> ⚠️ 本项目包括文档大部分由 AI 完成，如遇到问题请提 [Issue](https://github.com/qingu-x/msgraph-orm-js/issues)
 
 ## ✨ 特性
 
-- 🎯 **类 ORM 接口**: 直观的链式调用，类似 TypeORM/Sequelize 的开发体验
-- 📘 **完整类型支持**: 100% TypeScript 编写，完整的类型定义和 IntelliSense
-- 🌏 **国家云支持**: 完整支持全球版、中国版、美国政府版云环境
-- 🔐 **多种认证方式**: 支持客户端凭据、委托权限等多种认证
-- 🚀 **95%+ API 覆盖**: 覆盖 Microsoft Graph v1.0 的绝大多数常用接口
-- 🔍 **强大查询构建器**: 支持复杂查询、分页、排序、展开等
-- ⚡ **高级功能**: Delta Query、批处理、Webhooks 等
-- 📝 **详细文档**: 完整的 API 文档和使用示例
-- 🛡️ **权限提示**: 每个 API 都标注了所需权限
+- 🎯 **类 ORM 接口**: 直观的链式调用
+- 📘 **完整类型支持**: 100% TypeScript 编写
+- 🌏 **国家云支持**: 全球版/中国版/美国政府版
+- 🚀 **95%+ API 覆盖**: 覆盖 Graph v1.0 绝大多数常用接口
+- 🔍 **强大查询构建器**: 支持复杂查询、分页、排序
+- ⚡ **高级功能**: Delta Query、批处理、Webhooks
 
 ## 📦 安装
 
@@ -24,8 +23,6 @@ npm install @qingu-x/msgraph-orm-js @microsoft/microsoft-graph-client
 ```
 
 ## 🚀 快速开始
-
-### 基础用法
 
 ```typescript
 import { Client } from '@microsoft/microsoft-graph-client';
@@ -44,32 +41,26 @@ const client = Client.initWithMiddleware({ authProvider });
 // 3. 创建 ORM 实例
 const orm = createGraphORM(client);
 
-// 4. 开始使用！
+// 4. 开始使用
 const users = await orm.users
   .query()
   .select(['displayName', 'mail'])
   .top(10)
   .execute();
-
-console.log('用户列表:', users.data);
 ```
 
 ### 国家云支持
 
 ```typescript
-// 中国版（由世纪互联运营）
+// 中国版
 const authProvider = new ClientCredentialsAuthProvider({
-  tenantId: 'your-tenant-id',
-  clientId: 'your-client-id',
-  clientSecret: 'your-client-secret',
+  // ...其他配置
   cloudEndpoint: 'https://microsoftgraph.chinacloudapi.cn'
 });
 
 // 美国政府版
 const authProvider = new ClientCredentialsAuthProvider({
-  tenantId: 'your-tenant-id',
-  clientId: 'your-client-id',
-  clientSecret: 'your-client-secret',
+  // ...其他配置
   cloudEndpoint: 'https://graph.microsoft.us'
 });
 ```
@@ -80,27 +71,17 @@ const authProvider = new ClientCredentialsAuthProvider({
 
 ```typescript
 // 查询用户
-const managers = await orm.users
+const users = await orm.users
   .query()
   .where('jobTitle', 'contains', '经理')
-  .and('accountEnabled', 'eq', true)
   .orderBy('displayName', 'asc')
   .execute();
 
-// 获取单个用户
+// CRUD 操作
 const user = await orm.users.findById('user-id');
-
-// 创建用户
-const newUser = await orm.users.create({
-  displayName: '张三',
-  userPrincipalName: 'zhangsan@contoso.com',
-  // ...
-});
-
-// 更新用户
-await orm.users.update('user-id', {
-  jobTitle: '高级工程师'
-});
+const newUser = await orm.users.create({ /* ... */ });
+await orm.users.update('user-id', { jobTitle: '高级工程师' });
+await orm.users.delete('user-id');
 ```
 
 ### 日历管理
@@ -113,7 +94,7 @@ const events = await orm.events('user@contoso.com')
   .top(20)
   .execute();
 
-// 获取日历视图（指定时间范围）
+// 日历视图（时间范围）
 const upcomingEvents = await orm.getCalendarView(
   'user@contoso.com',
   startDate,
@@ -136,13 +117,8 @@ const messages = await orm.inbox('user@contoso.com')
 // 发送邮件
 await orm.sendMail('user@contoso.com', {
   subject: '测试邮件',
-  body: {
-    contentType: 'HTML',
-    content: '<p>邮件内容</p>'
-  },
-  toRecipients: [
-    { emailAddress: { address: 'recipient@contoso.com' } }
-  ]
+  body: { contentType: 'HTML', content: '<p>内容</p>' },
+  toRecipients: [{ emailAddress: { address: 'recipient@contoso.com' } }]
 });
 ```
 
@@ -175,13 +151,10 @@ const teams = await orm.teams.query().execute();
 
 // 发送频道消息
 await orm.sendChannelMessage('team-id', 'channel-id', {
-  body: {
-    contentType: 'html',
-    content: '<h1>通知</h1>'
-  }
+  body: { contentType: 'html', content: '<h1>通知</h1>' }
 });
 
-// 获取团队成员
+// 团队成员
 const members = await orm.teamMembers('team-id').query().execute();
 ```
 
@@ -191,15 +164,10 @@ const members = await orm.teamMembers('team-id').query().execute();
 // 获取站点
 const site = await orm.getSiteByPath('contoso.sharepoint.com', '/sites/team');
 
-// 操作列表
+// 列表操作
 const items = await orm.listItems('site-id', 'list-id').query().execute();
-
-// 创建列表项
 await orm.listItems('site-id', 'list-id').create({
-  fields: {
-    Title: '新项目',
-    Status: '进行中'
-  }
+  fields: { Title: '新项目', Status: '进行中' }
 });
 ```
 
@@ -214,7 +182,6 @@ const deltaLink = result.meta.deltaLink;
 
 // 后续只获取变化
 const changes = await orm.deltaUsers(deltaLink);
-console.log('变化的用户:', changes.data);
 ```
 
 ### 批处理请求
@@ -237,105 +204,67 @@ const subscription = await orm.createSubscription({
 });
 ```
 
-### Microsoft Search
-
-```typescript
-// 搜索邮件
-const results = await orm.searchMessages('项目会议', 25);
-
-// 搜索文件
-const files = await orm.searchFiles('财务报告', 10);
-```
-
 ## 📖 API 覆盖范围
-
-本 SDK 覆盖了 Microsoft Graph v1.0 的 95%+ 常用接口：
 
 | 功能模块 | 覆盖率 | 国家云支持 |
 |---------|--------|-----------|
-| 用户和身份管理 | ✅ 100% | 全球版/中国版/美国政府版 |
-| 日历 | ✅ 100% | 全球版/中国版/美国政府版 |
-| 邮件 | ✅ 100% | 全球版/中国版/美国政府版 |
-| 联系人 | ✅ 100% | 全球版/中国版/美国政府版 |
-| 文件存储 (OneDrive) | ✅ 100% | 全球版/中国版/美国政府版 |
-| OneNote | ✅ 100% | 全球版/美国政府版（中国版不可用） |
-| 任务和计划 (Planner/To Do) | ✅ 100% | 全球版/美国政府版（中国版不可用） |
-| SharePoint | ✅ 100% | 全球版/中国版/美国政府版 |
-| Teams | ✅ 100% | 全球版/美国政府版（中国版功能受限） |
-| 报告和分析 | ✅ 95% | 全球版/美国政府版（中国版部分功能受限） |
-| 安全与合规 | ✅ 90% | 全球版/美国政府版（中国版不可用） |
-| 扩展 | ✅ 100% | 全球版/中国版/美国政府版 |
+| 用户和身份 | ✅ 100% | 全球/中国/美国政府 |
+| 日历 | ✅ 100% | 全球/中国/美国政府 |
+| 邮件 | ✅ 100% | 全球/中国/美国政府 |
+| 联系人 | ✅ 100% | 全球/中国/美国政府 |
+| 文件存储 | ✅ 100% | 全球/中国/美国政府 |
+| OneNote | ✅ 100% | 全球/美国政府 |
+| 任务计划 | ✅ 100% | 全球/美国政府 |
+| SharePoint | ✅ 100% | 全球/中国/美国政府 |
+| Teams | ✅ 100% | 全球/美国政府 |
+| 报告分析 | ✅ 95% | 全球/美国政府 |
+| 安全合规 | ✅ 90% | 全球/美国政府 |
 
-详细覆盖情况请查看 [API_COVERAGE.md](./API_COVERAGE.md)
+详细覆盖情况请查看 [API_COVERAGE.md](./docs/API_COVERAGE.md)
 
 ## 📝 文档
 
-> 💡 **提示**: 查看 [文档索引](./docs/DOCS_INDEX.md) 快速找到你需要的文档！
-
-- [📑 文档索引](./docs/DOCS_INDEX.md) - 所有文档的导航和说明
-- [🎓 快速开始指南](./docs/GRAPH_ORM_GUIDE.md) - ORM 使用教程
-- [💡 完整示例](./docs/EXAMPLES.md) - 各种场景的代码示例
-- [📘 API 参考](./docs/GRAPH_API_REFERENCE.md) - 所有 API 端点说明
-- [✅ API 覆盖率](./docs/API_COVERAGE.md) - 接口实现情况
-- [📝 更新日志](./docs/CHANGELOG.md) - 版本更新记录
-- [🎯 实施总结](./docs/IMPLEMENTATION_SUMMARY.md) - 完整实施报告
+| 文档 | 描述 |
+|------|------|
+| [README.md](./README.md) | 项目主文档（当前） |
+| [GRAPH_ORM_GUIDE.md](./docs/GRAPH_ORM_GUIDE.md) | ORM 使用教程 |
+| [EXAMPLES.md](./docs/EXAMPLES.md) | 完整代码示例 |
+| [API_COVERAGE.md](./docs/API_COVERAGE.md) | API 覆盖率 |
+| [CONTRIBUTING.md](./docs/CONTRIBUTING.md) | 开发贡献指南 |
+| [PUBLISHING.md](./docs/PUBLISHING.md) | NPM 发布指南 |
+| [DOCS_INDEX.md](./docs/DOCS_INDEX.md) | 完整文档索引 |
 
 ## 🔐 权限说明
 
-每个 API 都需要相应的权限。常用权限包括：
+常用权限：
 
 | 权限 | 说明 | 类型 |
 |------|------|------|
-| User.Read.All | 读取所有用户完整配置文件 | 应用 |
-| Mail.Send | 以用户身份发送邮件 | 委托 |
-| Calendars.ReadWrite | 读写用户日历 | 委托/应用 |
-| Files.ReadWrite.All | 读写所有文件 | 应用 |
-| Group.ReadWrite.All | 读写所有组 | 应用 |
+| User.Read.All | 读取所有用户 | 应用 |
+| Mail.Send | 发送邮件 | 委托 |
+| Calendars.ReadWrite | 读写日历 | 委托/应用 |
+| Files.ReadWrite.All | 读写文件 | 应用 |
+| Group.ReadWrite.All | 读写组 | 应用 |
 
-完整权限列表请参考 [Microsoft Graph 权限参考](https://learn.microsoft.com/graph/permissions-reference)
+完整权限列表：[Microsoft Graph 权限参考](https://learn.microsoft.com/graph/permissions-reference)
 
 ## 🌟 最佳实践
 
-### 1. 使用 Select 减少数据传输
-
 ```typescript
-// ✅ 好：只获取需要的字段
+// ✅ 使用 Select 减少数据传输
 const users = await orm.users
   .query()
   .select(['id', 'displayName', 'mail'])
   .execute();
 
-// ❌ 不好：获取所有字段
-const users = await orm.users.query().execute();
-```
-
-### 2. 使用分页控制结果数量
-
-```typescript
+// ✅ 使用分页控制结果数量
 const users = await orm.users.query().top(100).execute();
-```
 
-### 3. 使用 Delta Query 跟踪变化
-
-```typescript
-// 定期检查变化而不是每次全量查询
+// ✅ 使用 Delta Query 跟踪变化
 const changes = await orm.deltaUsers(savedDeltaLink);
-```
 
-### 4. 批处理减少请求次数
-
-```typescript
+// ✅ 批处理减少请求次数
 const batch = await orm.batch([/* 多个请求 */]);
-```
-
-### 5. 合理处理国家云差异
-
-```typescript
-try {
-  const notebooks = await orm.notebooks('user@contoso.com').query().execute();
-} catch (error) {
-  // OneNote 在中国版不可用，使用替代方案
-}
 ```
 
 ## 🐛 错误处理
@@ -362,71 +291,14 @@ try {
 }
 ```
 
-## 🛠️ 开发
-
-### 构建
-
-本项目使用 Vite 进行打包，支持 ESM、CJS 和 UMD 三种格式：
-
-```bash
-# 安装依赖
-npm install
-
-# 构建项目
-npm run build
-
-# 监听模式构建
-npm run build:watch
-
-# 运行测试
-npm test
-```
-
-### 构建产物
-
-- `lib/bundle.esm.js` - ES Module 格式（推荐用于现代项目）
-- `lib/bundle.cjs.js` - CommonJS 格式（Node.js 兼容）
-- `lib/bundle.browser.js` - UMD 格式（浏览器直接使用）
-- `types/` - TypeScript 类型声明文件
-
-### 发布到 NPM
-
-```bash
-# 1. 更新版本号（自动更新 CHANGELOG）
-npm run release
-
-# 2. 推送到 Git 仓库
-git push --follow-tags origin main
-
-# 3. 发布到 NPM（构建会自动执行）
-npm publish --access public
-
-# 或者使用 npm version 手动管理版本
-npm version patch  # 修订版本：0.0.1 -> 0.0.2
-npm version minor  # 次版本：0.0.1 -> 0.1.0
-npm version major  # 主版本：0.0.1 -> 1.0.0
-```
-
-### 技术栈
-
-- **构建工具**: Vite 7.x
-- **语言**: TypeScript 5.x
-- **测试框架**: Jest
-- **代码规范**: ESLint + TypeScript ESLint
-- **版本管理**: Standard Version (遵循语义化版本)
-- **提交规范**: Commitizen + Commitlint (遵循 Angular 规范)
-
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
 
-### 贡献指南
+详细指南：
 
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`npm run commit`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 提交 Pull Request
+- [CONTRIBUTING.md](./docs/CONTRIBUTING.md) - 开发环境、构建、测试、代码规范
+- [PUBLISHING.md](./docs/PUBLISHING.md) - 发布流程
 
 ## 📄 许可证
 
@@ -435,13 +307,11 @@ MIT License
 ## 🔗 相关链接
 
 - [Microsoft Graph 文档](https://learn.microsoft.com/graph/)
-- [Microsoft Graph Explorer](https://developer.microsoft.com/graph/graph-explorer)
-- [Microsoft Graph JavaScript SDK](https://github.com/microsoftgraph/msgraph-sdk-javascript)
+- [Graph Explorer](https://developer.microsoft.com/graph/graph-explorer)
+- [Graph SDK](https://github.com/microsoftgraph/msgraph-sdk-javascript)
 - [国家云部署](https://learn.microsoft.com/graph/deployments)
 
-## 💡 支持
-
-如有问题，请：
+## 💡 获取帮助
 
 1. 查看 [文档](./docs/DOCS_INDEX.md)
 2. 查看 [示例代码](./docs/EXAMPLES.md)
@@ -450,4 +320,3 @@ MIT License
 ---
 
 Made with ❤️ by Qingu-X
-

@@ -25,15 +25,16 @@ export default defineConfig({
           '@microsoft/microsoft-graph-client',
           '@microsoft/microsoft-graph-types',
           'ky',
-          'debug'
+          'debug',
+          'https-proxy-agent',  // Node.js 专用代理包
+          'agent-base'          // https-proxy-agent 的依赖
         ]
         
         if (npmExternals.some(pkg => id === pkg || id.startsWith(pkg + '/'))) {
           return true
         }
         
-        // Node.js 内置模块为外部依赖（ESM 和 CJS 格式）
-        // 检查是否为 Node.js 内置模块
+        // Node.js 内置模块为外部依赖
         const nodeBuiltins = builtinModules
         if (nodeBuiltins.includes(id) || nodeBuiltins.includes(id.replace(/^node:/, ''))) {
           return true
