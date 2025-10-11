@@ -1,6 +1,6 @@
 {
   "name": "@qingu-x/msgraph-orm-js",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "module",
   "description": "Microsoft Graph JavaScript SDK for Qingu-X",
   "main": "lib/bundle.cjs.js",
@@ -36,7 +36,9 @@
     "prepare": "husky",
     "prepublishOnly": "npm run build",
     "release": "standard-version",
-    "version": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0 && git add CHANGELOG.md"
+    "release:minor": "standard-version --release-as minor",
+    "release:major": "standard-version --release-as major",
+    "release:patch": "standard-version --release-as patch"
   },
   "keywords": [
     "template",
