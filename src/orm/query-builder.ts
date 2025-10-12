@@ -390,6 +390,60 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
   }
 
   /**
+   * 获取 ORM 生成的完整请求信息
+   * 包括端点、查询参数和请求头
+   * 
+   * @returns 包含端点、参数和头信息的完整请求对象
+   * @example
+   * ```typescript
+   * const raw = queryBuilder.getRaw();
+   * console.log(raw);
+   * // {
+   * //   endpoint: '/users',
+   * //   params: { $filter: "displayName eq 'John'", $top: 10 },
+   * //   headers: { ConsistencyLevel: 'eventual' },
+   * //   url: '/users?$filter=displayName%20eq%20%27John%27&$top=10'
+   * // }
+   * ```
+   */
+  public getRaw(): {
+    endpoint: string;
+    params: Record<string, string | number>;
+    headers: Record<string, string>;
+    url: string;
+  } {
+    const params = this.buildQueryParams();
+    const headers: Record<string, string> = {};
+    
+    // 检查是否需要添加 ConsistencyLevel: eventual 头部
+    const needsEventualConsistency = 
+      this.searchQuery ||
+      this.buildSearchQuery() ||
+      this.countOnly ||
+      this.hasAdvancedOperators();
+    
+    if (needsEventualConsistency) {
+      headers['ConsistencyLevel'] = 'eventual';
+    }
+    
+    // 构建完整 URL（用于展示）
+    let url = this.endpoint;
+    if (Object.keys(params).length > 0) {
+      const queryString = Object.entries(params)
+        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+        .join('&');
+      url = `${this.endpoint}?${queryString}`;
+    }
+    
+    return {
+      endpoint: this.endpoint,
+      params,
+      headers,
+      url
+    };
+  }
+
+  /**
    * 构建查询参数
    * 组合所有 OData 查询选项
    * @see https://learn.microsoft.com/graph/query-parameters
@@ -471,7 +525,7 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
    * @throws GraphOrmError 查询失败时抛出
    * @see https://learn.microsoft.com/graph/aad-advanced-queries
    */
-  async execute(): Promise<GraphCollection<T>> {
+  async get(): Promise<GraphCollection<T>> {
     try {
       const params = this.buildQueryParams();
       let request = this.client.api(this.endpoint);
@@ -519,8 +573,8 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
    * @returns 第一个匹配的实体
    * @throws GraphOrmError 没有找到结果时抛出 NO_ENTITY_FOUND 错误
    */
-  async executeSingle(): Promise<T> {
-    const result = await this.execute();
+  async first(): Promise<T> {
+    const result = await this.get();
     if (result.data.length === 0) {
       throw GraphOrmError.create(
         GraphErrorCode.NO_ENTITY_FOUND,
@@ -535,7 +589,7 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
    * 
    * 使用示例：
    * ```typescript
-   * for await (const user of orm.users.query().executeWithPagination()) {
+   * for await (const user of orm.users.query().pagination()) {
    *   console.log(user.displayName);
    * }
    * ```
@@ -545,7 +599,7 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
    * @returns 异步迭代器，逐个返回实体
    * @see https://learn.microsoft.com/graph/paging
    */
-  async *executeWithPagination(): AsyncIterableIterator<T> {
+  async *pagination(): AsyncIterableIterator<T> {
     let nextLink: string | undefined;
     let isFirstPage = true;
     
@@ -555,7 +609,7 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
         
         if (isFirstPage) {
           // 第一页：使用当前的查询参数
-          result = await this.execute();
+          result = await this.get();
           isFirstPage = false;
         } else if (nextLink) {
           // 后续页：使用 nextLink

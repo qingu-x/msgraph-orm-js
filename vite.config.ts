@@ -18,7 +18,7 @@ export default defineConfig({
     },
     outDir: 'lib',
     rollupOptions: {
-      external: (id, parentId, isResolved) => {
+      external: (id) => {
         // NPM 包始终为外部依赖
         const npmExternals = [
           '@azure/identity',
@@ -46,16 +46,18 @@ export default defineConfig({
         globals: {
           '@azure/identity': 'AzureIdentity',
           '@microsoft/microsoft-graph-client': 'MicrosoftGraph',
+          '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js': 'MicrosoftGraphAuthProviders',
           '@microsoft/microsoft-graph-types': 'MicrosoftGraphTypes',
           'ky': 'ky',
-          'debug': 'debug'
+          'debug': 'debug',
+          'https-proxy-agent': 'HttpsProxyAgent'
         },
         footer: (chunk) => {
           if (chunk.name === 'index') {
             return `
-if(typeof window !== 'undefined') {
-  window._msgraph_orm_js_version_ = '0.0.1'
-}`
+            if(typeof window !== 'undefined') {
+              window._msgraph_orm_js_version_ = '0.0.1'
+            }`
           }
           return ''
         }

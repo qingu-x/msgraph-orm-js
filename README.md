@@ -46,7 +46,7 @@ const users = await orm.users
   .query()
   .select(['displayName', 'mail'])
   .top(10)
-  .execute();
+  .get();
 ```
 
 ### 国家云支持
@@ -75,7 +75,7 @@ const users = await orm.users
   .query()
   .where('jobTitle', 'contains', '经理')
   .orderBy('displayName', 'asc')
-  .execute();
+  .get();
 
 // CRUD 操作
 const user = await orm.users.findById('user-id');
@@ -92,7 +92,7 @@ const events = await orm.events('user@contoso.com')
   .query()
   .orderBy('start/dateTime', 'asc')
   .top(20)
-  .execute();
+  .get();
 
 // 日历视图（时间范围）
 const upcomingEvents = await orm.getCalendarView(
@@ -112,7 +112,7 @@ const rooms = await orm.findRooms('user@contoso.com');
 const messages = await orm.inbox('user@contoso.com')
   .query()
   .top(10)
-  .execute();
+  .get();
 
 // 发送邮件
 await orm.sendMail('user@contoso.com', {
@@ -126,7 +126,7 @@ await orm.sendMail('user@contoso.com', {
 
 ```typescript
 // 列出文件
-const files = await orm.driveItems('user@contoso.com').query().execute();
+const files = await orm.driveItems('user@contoso.com').query().get();
 
 // 搜索文件
 const results = await orm.searchDriveItems('user@contoso.com', '报告');
@@ -147,7 +147,7 @@ const link = await orm.createDriveItemLink(
 
 ```typescript
 // 获取团队
-const teams = await orm.teams.query().execute();
+const teams = await orm.teams.query().get();
 
 // 发送频道消息
 await orm.sendChannelMessage('team-id', 'channel-id', {
@@ -155,7 +155,7 @@ await orm.sendChannelMessage('team-id', 'channel-id', {
 });
 
 // 团队成员
-const members = await orm.teamMembers('team-id').query().execute();
+const members = await orm.teamMembers('team-id').query().get();
 ```
 
 ### SharePoint
@@ -165,7 +165,7 @@ const members = await orm.teamMembers('team-id').query().execute();
 const site = await orm.getSiteByPath('contoso.sharepoint.com', '/sites/team');
 
 // 列表操作
-const items = await orm.listItems('site-id', 'list-id').query().execute();
+const items = await orm.listItems('site-id', 'list-id').query().get();
 await orm.listItems('site-id', 'list-id').create({
   fields: { Title: '新项目', Status: '进行中' }
 });
@@ -255,10 +255,10 @@ const subscription = await orm.createSubscription({
 const users = await orm.users
   .query()
   .select(['id', 'displayName', 'mail'])
-  .execute();
+  .get();
 
 // ✅ 使用分页控制结果数量
-const users = await orm.users.query().top(100).execute();
+const users = await orm.users.query().top(100).get();
 
 // ✅ 使用 Delta Query 跟踪变化
 const changes = await orm.deltaUsers(savedDeltaLink);

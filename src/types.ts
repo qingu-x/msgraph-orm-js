@@ -31,7 +31,3 @@ export const defaultEndpoints: { [key in 'global' | 'usGCC' | 'usGCCHigh' | 'usD
     graph: 'https://microsoftgraph.chinacloudapi.cn',
   }
 };
-
-export interface MeetingParams {
-  [key: string]: string | number;
-}

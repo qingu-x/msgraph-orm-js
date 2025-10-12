@@ -13,6 +13,7 @@
 - [SharePoint](#sharepoint)
 - [报告和分析](#报告和分析)
 - [高级查询](#高级查询)
+- [查看 ORM 生成的请求参数](#查看-orm-生成的请求参数)
 
 ## 初始化
 
@@ -66,7 +67,7 @@ const users = await orm.users
   .query()
   .select(['id', 'displayName', 'mail'])
   .top(10)
-  .execute();
+  .get();
 
 console.log('用户列表:', users.data);
 ```
@@ -80,7 +81,7 @@ const managers = await orm.users
   .where('jobTitle', 'contains', '经理')
   .and('accountEnabled', 'eq', true)
   .orderBy('displayName', 'asc')
-  .execute();
+  .get();
 
 // 获取单个用户
 const user = await orm.users.findById('user-id');
@@ -136,13 +137,13 @@ console.log('可用许可证:', skus);
 
 ```typescript
 // 获取所有组
-const groups = await orm.groups.query().execute();
+const groups = await orm.groups.query().get();
 
 // 获取组成员
-const members = await orm.groupMembers('group-id').query().execute();
+const members = await orm.groupMembers('group-id').query().get();
 
 // 获取组所有者
-const owners = await orm.groupOwners('group-id').query().execute();
+const owners = await orm.groupOwners('group-id').query().get();
 
 // 创建 Microsoft 365 组
 const newGroup = await orm.groups.create({
@@ -166,7 +167,7 @@ const events = await orm.events('user@contoso.com')
   .select(['subject', 'start', 'end', 'location'])
   .orderBy('start/dateTime', 'asc')
   .top(20)
-  .execute();
+  .get();
 
 console.log('日历事件:', events.data);
 ```
@@ -258,7 +259,7 @@ const messages = await orm.inbox('user@contoso.com')
   .select(['subject', 'from', 'receivedDateTime', 'isRead'])
   .orderBy('receivedDateTime', 'desc')
   .top(10)
-  .execute();
+  .get();
 
 console.log('收件箱邮件:', messages.data);
 
@@ -266,7 +267,7 @@ console.log('收件箱邮件:', messages.data);
 const unreadMessages = await orm.inbox('user@contoso.com')
   .query()
   .where('isRead', 'eq', false)
-  .execute();
+  .get();
 ```
 
 ### 发送邮件
@@ -369,14 +370,14 @@ const files = await orm.driveItems('user@contoso.com')
   .query()
   .select(['name', 'size', 'createdDateTime', 'webUrl'])
   .orderBy('lastModifiedDateTime', 'desc')
-  .execute();
+  .get();
 
 console.log('文件列表:', files.data);
 
 // 获取指定路径的文件
 const documents = await orm.driveItemsByPath('user@contoso.com', '/Documents')
   .query()
-  .execute();
+  .get();
 ```
 
 ### 搜索文件
@@ -496,13 +497,13 @@ console.log('变化的文件:', result.data);
 
 ```typescript
 // 获取所有团队
-const teams = await orm.teams.query().execute();
+const teams = await orm.teams.query().get();
 
 // 通过组 ID 获取团队
 const team = await orm.getTeamByGroup('group-id');
 
 // 获取频道
-const channels = await orm.channels('team-id').query().execute();
+const channels = await orm.channels('team-id').query().get();
 ```
 
 ### 发送频道消息
@@ -526,19 +527,19 @@ const messages = await orm.channelMessages('team-id', 'channel-id')
   .query()
   .orderBy('createdDateTime', 'desc')
   .top(50)
-  .execute();
+  .get();
 
 // 获取消息回复
 const replies = await orm.channelMessageReplies('team-id', 'channel-id', 'message-id')
   .query()
-  .execute();
+  .get();
 ```
 
 ### 管理团队成员
 
 ```typescript
 // 获取团队成员
-const members = await orm.teamMembers('team-id').query().execute();
+const members = await orm.teamMembers('team-id').query().get();
 
 // 添加成员
 await orm.teamMembers('team-id').create({
@@ -569,13 +570,13 @@ console.log('站点 ID:', site.id);
 
 ```typescript
 // 获取站点列表
-const lists = await orm.siteLists('site-id').query().execute();
+const lists = await orm.siteLists('site-id').query().get();
 
 // 获取列表项
 const items = await orm.listItems('site-id', 'list-id')
   .query()
   .expand('fields')
-  .execute();
+  .get();
 
 // 创建列表项
 const newItem = await orm.listItems('site-id', 'list-id').create({
@@ -591,7 +592,7 @@ const newItem = await orm.listItems('site-id', 'list-id').create({
 
 ```typescript
 // 获取列定义
-const columns = await orm.listColumns('site-id', 'list-id').query().execute();
+const columns = await orm.listColumns('site-id', 'list-id').query().get();
 
 // 创建新列
 const newColumn = await orm.listColumns('site-id', 'list-id').create({
@@ -629,14 +630,14 @@ const audits = await orm.directoryAudits
   .query()
   .orderBy('activityDateTime', 'desc')
   .top(100)
-  .execute();
+  .get();
 
 // 获取登录日志
 const signIns = await orm.signInLogs
   .query()
   .where('createdDateTime', 'ge', '2025-10-01T00:00:00Z')
   .and('status/errorCode', 'eq', 0) // 成功登录
-  .execute();
+  .get();
 ```
 
 ### 洞察分析
@@ -645,17 +646,17 @@ const signIns = await orm.signInLogs
 // 获取趋势文件
 const trending = await orm.trendingInsights('user@contoso.com')
   .query()
-  .execute();
+  .get();
 
 // 获取最近使用的文件
 const used = await orm.usedInsights('user@contoso.com')
   .query()
-  .execute();
+  .get();
 
 // 获取共享的文件
 const shared = await orm.sharedInsights('user@contoso.com')
   .query()
-  .execute();
+  .get();
 ```
 
 ### 人员分析
@@ -665,7 +666,7 @@ const shared = await orm.sharedInsights('user@contoso.com')
 const people = await orm.people('user@contoso.com')
   .query()
   .top(10)
-  .execute();
+  .get();
 
 console.log('相关人员:', people.data);
 ```
@@ -684,7 +685,7 @@ const results = await orm.users
   .orderBy('displayName', 'asc')
   .select(['id', 'displayName', 'jobTitle', 'mail'])
   .top(50)
-  .execute();
+  .get();
 ```
 
 ### 展开关联数据
@@ -695,7 +696,7 @@ const usersWithManager = await orm.users
   .query()
   .expand('manager')
   .select(['displayName', 'mail', 'manager'])
-  .execute();
+  .get();
 ```
 
 ### 搜索和筛选
@@ -705,7 +706,43 @@ const usersWithManager = await orm.users
 const searchResults = await orm.users
   .query()
   .search('displayName', '张')
-  .execute();
+  .get();
+```
+
+### 查看 ORM 生成的请求参数
+
+```typescript
+// 获取 ORM 生成的完整请求信息（用于调试或日志记录）
+const queryBuilder = orm.users
+  .query()
+  .where('department', 'eq', '技术部')
+  .and('jobTitle', 'contains', '工程师')
+  .select(['id', 'displayName', 'mail'])
+  .orderBy('displayName', 'asc')
+  .top(50);
+
+// 获取请求的原始参数
+const raw = queryBuilder.getRaw();
+
+console.log('端点:', raw.endpoint);
+// 输出: /users
+
+console.log('查询参数:', raw.params);
+// 输出: {
+//   $filter: "department eq '技术部' and contains(jobTitle,'工程师')",
+//   $select: "id,displayName,mail",
+//   $orderby: "displayName asc",
+//   $top: 50
+// }
+
+console.log('请求头:', raw.headers);
+// 输出: { ConsistencyLevel: 'eventual' }
+
+console.log('完整 URL:', raw.url);
+// 输出: /users?$filter=department%20eq%20%27%E6%8A%80%E6%9C%AF%E9%83%A8%27...
+
+// 然后再执行查询
+const result = await queryBuilder.get();
 ```
 
 ### 分页查询
@@ -720,7 +757,7 @@ while (hasMore) {
     .query()
     .top(100)
     .skip(page * 100)
-    .execute();
+    .get();
   
   console.log(`第 ${page + 1} 页，共 ${result.data.length} 条记录`);
   
@@ -854,20 +891,20 @@ try {
 
 ```typescript
 // ❌ 不好：获取所有字段
-const users = await orm.users.query().execute();
+const users = await orm.users.query().get();
 
 // ✅ 好：只获取需要的字段
 const users = await orm.users
   .query()
   .select(['id', 'displayName', 'mail'])
-  .execute();
+  .get();
 ```
 
 ### 2. 使用分页避免大量数据
 
 ```typescript
 // ✅ 使用 top 限制结果数量
-const users = await orm.users.query().top(100).execute();
+const users = await orm.users.query().top(100).get();
 ```
 
 ### 3. 使用 Delta Query 跟踪变化
@@ -889,7 +926,7 @@ const batch = await orm.batch([/* 多个请求 */]);
 ```typescript
 // ✅ 对不可用的 API 进行降级处理
 try {
-  const notebooks = await orm.notebooks('user@contoso.com').query().execute();
+  const notebooks = await orm.notebooks('user@contoso.com').query().get();
 } catch (error) {
   if (error.code === GraphErrorCode.RESOURCE_NOT_FOUND) {
     console.log('OneNote 在当前云环境不可用');

@@ -44,9 +44,15 @@ export interface QueryBuilder<T> {
   expand(property: string | string[]): QueryBuilder<T>;
   format(format: 'json' | 'atom'): QueryBuilder<T>;
   count(): QueryBuilder<T>;
-  execute(): Promise<GraphCollection<T>>;
-  executeSingle(): Promise<T>;
-  executeWithPagination(): AsyncIterableIterator<T>;
+  getRaw(): {
+    endpoint: string;
+    params: Record<string, string | number>;
+    headers: Record<string, string>;
+    url: string;
+  };
+  get(): Promise<GraphCollection<T>>;
+  first(): Promise<T>;
+  pagination(): AsyncIterableIterator<T>;
 }
 
 // 实体管理器接口

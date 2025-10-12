@@ -26,7 +26,7 @@ export class GraphEntityManager<T extends GraphEntity> implements EntityManager<
     });
     
     try {
-      const result = await queryBuilder.executeSingle();
+      const result = await queryBuilder.first();
       return result;
     } catch (error) {
       // 如果是 NO_ENTITY_FOUND 错误，返回 null
@@ -48,7 +48,7 @@ export class GraphEntityManager<T extends GraphEntity> implements EntityManager<
           queryBuilder.where(condition.field, condition.operator, condition.value);
         });
       }
-      const result = await queryBuilder.count().execute();
+      const result = await queryBuilder.count().get();
       return result;
     } catch (error) {
       throw GraphOrmError.fromGraphError(error);

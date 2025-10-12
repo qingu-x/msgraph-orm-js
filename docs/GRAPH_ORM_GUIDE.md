@@ -35,17 +35,17 @@
 ### 1. 初始化客户端
 
 ```typescript
-import { ApplicationClient, defaultEndpoints, createGraphORM } from 'msgraph-orm-js';
+import { GraphClient, defaultEndpoints, createGraphORM } from 'msgraph-orm-js';
 
 // 全球版
-const globalClient = new ApplicationClient({
+const globalClient = new GraphClient({
   tenantId: 'your-tenant-id',
   clientId: 'your-client-id',
   clientSecret: 'your-client-secret'
 }, defaultEndpoints.global);
 
 // 中国版（21Vianet）
-const cnClient = new ApplicationClient({
+const cnClient = new GraphClient({
   tenantId: 'your-tenant-id',
   clientId: 'your-client-id',
   clientSecret: 'your-client-secret'
@@ -68,7 +68,7 @@ const users = await orm.users.findMany();
 const result = await orm.users.query()
   .where('displayName', 'contains', '张')
   .top(10)
-  .execute();
+  .get();
 
 // 复杂查询
 const result = await orm.users.query()
@@ -77,7 +77,7 @@ const result = await orm.users.query()
   .orderBy('displayName', 'asc')
   .select(['id', 'displayName', 'mail'])
   .top(20)
-  .execute();
+  .get();
 ```
 
 #### 新增功能
@@ -90,18 +90,18 @@ const result = await orm.users.query()
   .select(['id', 'displayName', 'mail'])
   .expand('manager')
   .top(10)
-  .execute();
+  .get();
 
 // 展开多个属性
 const result = await orm.users.query()
   .expand(['manager', 'memberOf'])
   .top(5)
-  .execute();
+  .get();
 
 // 嵌套展开并选择字段
 const result = await orm.users.query()
   .expand('manager($select=displayName,mail)')
-  .execute();
+  .get();
 ```
 
 ##### 2. $skiptoken - 分页令牌
@@ -110,7 +110,7 @@ const result = await orm.users.query()
 // 获取第一页
 const firstPage = await orm.users.query()
   .top(10)
-  .execute();
+  .get();
 
 // 提取 skiptoken
 if (firstPage.meta.nextLink) {
@@ -121,15 +121,15 @@ if (firstPage.meta.nextLink) {
   const nextPage = await orm.users.query()
     .top(10)
     .skipToken(skiptoken!)
-    .execute();
+    .get();
 }
 ```
 
-##### 3. executeWithPagination - 自动分页
+##### 3. pagination - 自动分页
 
 ```typescript
 // 自动处理分页，迭代所有数据
-for await (const user of orm.users.query().top(50).executeWithPagination()) {
+for await (const user of orm.users.query().top(50).pagination()) {
   console.log(user.displayName);
   // 自动获取所有页，无需手动处理 nextLink
 }
@@ -138,7 +138,7 @@ for await (const user of orm.users.query().top(50).executeWithPagination()) {
 for await (const user of orm.users.query()
   .where('department', 'eq', '销售部')
   .select(['displayName', 'mail'])
-  .executeWithPagination()
+  .pagination()
 ) {
   console.log(user.displayName, user.mail);
 }
@@ -150,7 +150,7 @@ for await (const user of orm.users.query()
 const result = await orm.users.query()
   .format('json')
   .top(10)
-  .execute();
+  .get();
 ```
 
 ### 资源类型支持
@@ -188,7 +188,7 @@ const calendarEvents = await orm.calendarEvents('user@contoso.com')
   .query()
   .where('start/dateTime', 'ge', new Date().toISOString())
   .orderBy('start/dateTime', 'asc')
-  .execute();
+  .get();
 
 // 指定日历的事件
 const events = await orm.calendarEventsById('user@contoso.com', 'calendar-id')
@@ -223,7 +223,7 @@ const messages = await orm.messages('user@contoso.com')
   .where('isRead', false)
   .orderBy('receivedDateTime', 'desc')
   .top(20)
-  .execute();
+  .get();
 
 // 收件箱
 const inbox = await orm.inbox('user@contoso.com').findMany();
@@ -330,13 +330,13 @@ batchResponse.responses.forEach(response => {
 try {
   await orm.users.query()
     .where('mail', 'ne', null)
-    .execute();
+    .get();
 } catch (error) {
   // GraphOrmError: User 资源不支持 'ne' (不等于) 操作符
 }
 
 // ✅ 正确：使用客户端过滤
-const users = await orm.users.query().execute();
+const users = await orm.users.query().get();
 const filteredUsers = users.data.filter(u => u.mail !== null);
 ```
 
@@ -348,7 +348,7 @@ try {
   await orm.users.query()
     .where('displayName', 'startswith', '张')
     .orderBy('displayName', 'asc')  // 会抛出错误
-    .execute();
+    .get();
 } catch (error) {
   // GraphOrmError: 使用高级查询操作符时不支持排序
 }
@@ -356,7 +356,7 @@ try {
 // ✅ 正确：移除排序或使用客户端排序
 const result = await orm.users.query()
   .where('displayName', 'startswith', '张')
-  .execute();
+  .get();
 const sorted = result.data.sort((a, b) => 
   a.displayName.localeCompare(b.displayName)
 );
@@ -405,7 +405,7 @@ const users = await orm.users.findMany();
 // ✅ 推荐：只获取需要的字段
 const users = await orm.users.query()
   .select(['id', 'displayName', 'mail'])
-  .execute();
+  .get();
 ```
 
 ### 2. 使用 $expand 减少请求次数
@@ -420,17 +420,17 @@ for (const user of users.data) {
 // ✅ 推荐：一次请求获取关联数据
 const users = await orm.users.query()
   .expand('manager($select=displayName,mail)')
-  .execute();
+  .get();
 ```
 
-### 3. 使用 executeWithPagination 处理大量数据
+### 3. 使用 pagination 处理大量数据
 
 ```typescript
 // ❌ 不推荐：可能超时或内存溢出
 const allUsers = await orm.users.findMany();
 
 // ✅ 推荐：流式处理
-for await (const user of orm.users.query().executeWithPagination()) {
+for await (const user of orm.users.query().pagination()) {
   // 逐个处理用户
   await processUser(user);
 }

@@ -58,9 +58,7 @@
   "homepage": "https://github.com/qingu-x/msgraph-orm-js#readme",
   "dependencies": {
     "@azure/identity": "^4.13.0",
-    "@microsoft/microsoft-graph-client": "^3.0.7",
-    "debug": "^4.4.1",
-    "ky": "^1.8.1"
+    "@microsoft/microsoft-graph-client": "^3.0.7"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",

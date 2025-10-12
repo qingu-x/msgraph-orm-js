@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.8](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.7...v0.0.8) (2025-10-11)
+
+
+### 🐛 Bug Fixes
+
+* **types:** defaultEndpoints's key ([516b57f](https://github.com/qingu-x/msgraph-orm-js/commit/516b57f841462b8568f7f2df40fc0fa3a81e6045))
+
 ### [0.0.7](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.6...v0.0.7) (2025-10-11)
 
 

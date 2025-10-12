@@ -67,7 +67,7 @@ class QueryBuilder<T> {
   orderBy(field, direction): this
   top(count: number): this
   expand(relations: string[]): this
-  execute(): Promise<QueryResult<T>>
+  get(): Promise<QueryResult<T>>
 }
 ```
 
@@ -92,14 +92,14 @@ class QueryBuilder<T> {
 
 ```typescript
 // ❌ 不好：获取所有字段
-const users = await orm.users.query().execute();
+const users = await orm.users.query().get();
 
 // ✅ 好：只获取需要的字段
 const users = await orm.users
   .query()
   .select(['id', 'displayName', 'mail'])
   .top(100)
-  .execute();
+  .get();
 
 // ✅ 更好：使用 Delta Query 增量同步
 const changes = await orm.deltaUsers(savedDeltaLink);
@@ -226,7 +226,7 @@ const users = await orm.users
   .select(['displayName', 'mail'])
   .where('accountEnabled', 'eq', true)
   .top(10)
-  .execute();
+  .get();
 ```
 
 ### 高级功能
