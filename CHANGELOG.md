@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.1.0](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.9...v0.1.0) (2025-10-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **orm:** 创建了清晰的三层架构（ORM → Repositories + Services）
+
+### ♻️ Code Refactoring
+
+* **orm:** rebuild orm with repository & service ([37bc7d7](https://github.com/qingu-x/msgraph-orm-js/commit/37bc7d7a4d3d014f94baad241e681f5674355771))
+
 ### [0.0.9](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.8...v0.0.9) (2025-10-12)
 
 
