@@ -55,6 +55,21 @@ export class EventRepository extends GraphRepository<Event> {
   }
 
   /**
+   * 创建查询构建器（自动应用默认时区）
+   * 
+   * 查询时会自动在 HTTP Header 中添加 Prefer: outlook.timezone，
+   * 使返回的事件时间使用指定的时区
+   */
+  query() {
+    const builder = super.query();
+    // 自动应用默认时区到查询
+    if (this.defaultTimeZone && this.defaultTimeZone !== 'UTC') {
+      builder.timezone(this.defaultTimeZone);
+    }
+    return builder;
+  }
+
+  /**
    * 创建事件（自动应用默认时区）
    */
   async create(entity: Omit<Event, 'id'>): Promise<Event> {
