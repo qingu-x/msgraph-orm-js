@@ -1,6 +1,6 @@
 {
   "name": "@qingu-x/msgraph-orm-js",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "type": "module",
   "description": "Microsoft Graph JavaScript SDK for Qingu-X",
   "main": "lib/bundle.cjs.js",
