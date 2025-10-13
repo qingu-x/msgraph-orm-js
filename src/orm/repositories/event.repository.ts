@@ -12,8 +12,62 @@ import { GraphOrmError } from '../errors';
  * @see https://learn.microsoft.com/graph/api/resources/event
  */
 export class EventRepository extends GraphRepository<Event> {
-  constructor(client: Client, endpoint: string) {
+  private defaultTimeZone: string = 'UTC';
+
+  constructor(client: Client, endpoint: string, defaultTimeZone?: string) {
     super(client, endpoint);
+    if (defaultTimeZone) {
+      this.defaultTimeZone = defaultTimeZone;
+    }
+  }
+
+  /**
+   * 设置默认时区
+   * 
+   * @param timeZone IANA 时区名称，如 'Asia/Shanghai', 'America/New_York', 'UTC'
+   */
+  setDefaultTimeZone(timeZone: string): void {
+    this.defaultTimeZone = timeZone;
+  }
+
+  /**
+   * 获取当前默认时区
+   */
+  getDefaultTimeZone(): string {
+    return this.defaultTimeZone;
+  }
+
+  /**
+   * 自动为事件的时间字段添加时区
+   */
+  private applyTimeZone(event: Partial<Event>): Partial<Event> {
+    const result = { ...event };
+    
+    if (result.start && !result.start.timeZone) {
+      result.start = { ...result.start, timeZone: this.defaultTimeZone };
+    }
+    
+    if (result.end && !result.end.timeZone) {
+      result.end = { ...result.end, timeZone: this.defaultTimeZone };
+    }
+    
+    return result;
+  }
+
+  /**
+   * 创建事件（自动应用默认时区）
+   */
+  async create(entity: Omit<Event, 'id'>): Promise<Event> {
+    const eventWithTimeZone = this.applyTimeZone(entity as Partial<Event>);
+    return super.create(eventWithTimeZone as Omit<Event, 'id'>);
+  }
+
+  /**
+   * 更新事件（自动应用默认时区）
+   */
+  async update(id: string, entity: Partial<Event>): Promise<Event> {
+    const eventWithTimeZone = this.applyTimeZone(entity);
+    return super.update(id, eventWithTimeZone);
   }
 
   /**

@@ -15,8 +15,29 @@ import { DriveItemRepository } from './drive-item.repository';
  * @see https://learn.microsoft.com/graph/api/resources/user
  */
 export class UserRepository extends GraphRepository<User> {
-  constructor(client: Client) {
+  private defaultTimeZone: string = 'UTC';
+
+  constructor(client: Client, defaultTimeZone?: string) {
     super(client, '/users');
+    if (defaultTimeZone) {
+      this.defaultTimeZone = defaultTimeZone;
+    }
+  }
+
+  /**
+   * 设置默认时区
+   * 
+   * @param timeZone IANA 时区名称，如 'Asia/Shanghai', 'America/New_York', 'UTC'
+   */
+  setDefaultTimeZone(timeZone: string): void {
+    this.defaultTimeZone = timeZone;
+  }
+
+  /**
+   * 获取当前默认时区
+   */
+  getDefaultTimeZone(): string {
+    return this.defaultTimeZone;
   }
 
   /**
@@ -82,7 +103,7 @@ export class UserRepository extends GraphRepository<User> {
    */
   events(userId: string): EventRepository {
     const endpoint = `/users/${encodeURIComponent(userId)}/events`;
-    return new EventRepository(this.client, endpoint);
+    return new EventRepository(this.client, endpoint, this.defaultTimeZone);
   }
 
   /**
@@ -90,7 +111,7 @@ export class UserRepository extends GraphRepository<User> {
    */
   calendarEvents(userId: string): EventRepository {
     const endpoint = `/users/${encodeURIComponent(userId)}/calendar/events`;
-    return new EventRepository(this.client, endpoint);
+    return new EventRepository(this.client, endpoint, this.defaultTimeZone);
   }
 
   /**

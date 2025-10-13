@@ -205,9 +205,9 @@ export class GraphORM {
    */
   public readonly calendar: CalendarService;
 
-  constructor(private client: Client) {
+  constructor(private client: Client, defaultTimeZone?: string) {
     // 初始化仓储
-    this.users = new UserRepository(client);
+    this.users = new UserRepository(client, defaultTimeZone);
     this.groups = new GroupRepository(client);
     this.devices = new GenericRepository<Device>(client, '/devices');
     this.applications = new GenericRepository<Application>(client, '/applications');
@@ -228,6 +228,33 @@ export class GraphORM {
   }
 
   // ==================== 便捷访问方法 ====================
+
+  /**
+   * 设置默认时区（用于事件创建和更新）
+   * 
+   * @param timeZone IANA 时区名称，如 'Asia/Shanghai', 'America/New_York', 'UTC', 'China Standard Time'
+   * 
+   * @example
+   * ```typescript
+   * orm.setDefaultTimeZone('Asia/Shanghai');
+   * // 之后创建的事件会自动使用此时区
+   * await orm.users.events('user-id').create({
+   *   subject: '会议',
+   *   start: { dateTime: '2024-01-15T10:00:00' },  // 自动应用 Asia/Shanghai
+   *   end: { dateTime: '2024-01-15T11:00:00' }     // 自动应用 Asia/Shanghai
+   * });
+   * ```
+   */
+  setDefaultTimeZone(timeZone: string): void {
+    this.users.setDefaultTimeZone(timeZone);
+  }
+
+  /**
+   * 获取当前默认时区
+   */
+  getDefaultTimeZone(): string {
+    return this.users.getDefaultTimeZone();
+  }
 
   /**
    * 获取当前认证用户信息
@@ -541,8 +568,11 @@ export class GraphORM {
 
 /**
  * 便捷的 ORM 工厂函数
+ * 
+ * @param client Microsoft Graph 客户端实例
+ * @param defaultTimeZone 默认时区，用于事件创建和更新（如 'Asia/Shanghai', 'UTC'）
  */
-export function createGraphORM(client: Client): GraphORM {
-  return new GraphORM(client);
+export function createGraphORM(client: Client, defaultTimeZone?: string): GraphORM {
+  return new GraphORM(client, defaultTimeZone);
 }
 

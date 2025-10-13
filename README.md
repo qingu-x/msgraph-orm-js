@@ -69,8 +69,11 @@ const graphClient = new GraphClient(
 // 2. 获取底层 Graph Client
 const client = graphClient.getGraphClient();
 
-// 3. 创建 ORM 实例
-const orm = createGraphORM(client);
+// 3. 创建 ORM 实例（可选：设置默认时区）
+const orm = createGraphORM(client, 'Asia/Shanghai');
+
+// 或者动态设置时区
+// orm.setDefaultTimeZone('Asia/Shanghai');
 
 // 4. 开始使用
 // 用户管理（仓储）
@@ -361,13 +364,23 @@ const meetings = await orm.users.events('user-id')
   .where('subject', 'contains', '团队会议')
   .get();
 
-// CRUD 操作
+// CRUD 操作（自动应用默认时区）
 const event = await orm.users.events('user-id').findById('event-id');
+
+// 创建事件（自动应用 ORM 的默认时区）
 await orm.users.events('user-id').create({
   subject: '团队会议',
-  start: { dateTime: '2024-01-15T10:00:00', timeZone: 'China Standard Time' },
-  end: { dateTime: '2024-01-15T11:00:00', timeZone: 'China Standard Time' }
+  start: { dateTime: '2024-01-15T10:00:00' },  // 自动应用 Asia/Shanghai
+  end: { dateTime: '2024-01-15T11:00:00' }     // 自动应用 Asia/Shanghai
 });
+
+// 或者手动指定时区（会覆盖默认时区）
+await orm.users.events('user-id').create({
+  subject: '团队会议',
+  start: { dateTime: '2024-01-15T10:00:00', timeZone: 'America/New_York' },
+  end: { dateTime: '2024-01-15T11:00:00', timeZone: 'America/New_York' }
+});
+
 await orm.users.events('user-id').update('event-id', { subject: '更新的标题' });
 await orm.users.events('user-id').delete('event-id');
 
