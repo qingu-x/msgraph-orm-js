@@ -215,10 +215,23 @@ await orm.users.assignLicense('user-id', [
   { skuId: 'sku-id' }
 ], []);
 
-// 用户关系
+// 用户关系（使用 Repository，支持查询构建器）
 const groups = await orm.users.groups('user-id').findMany();
-const messages = await orm.users.messages('user-id').findMany();
-const events = await orm.users.events('user-id').findMany();
+
+// 获取用户未读邮件
+const unreadMessages = await orm.users.messages('user-id')
+  .query()
+  .where('isRead', 'eq', false)
+  .orderBy('receivedDateTime', 'desc')
+  .top(10)
+  .get();
+
+// 获取用户本周事件
+const thisWeekEvents = await orm.users.events('user-id')
+  .query()
+  .where('start/dateTime', 'ge', '2024-01-01T00:00:00Z')
+  .orderBy('start/dateTime', 'asc')
+  .get();
 ```
 
 ### 组管理
@@ -246,6 +259,28 @@ const owners = await orm.groups.owners('group-id').findMany();
 ### 文件操作
 
 ```typescript
+// === Repository 方式：使用查询构建器查询文件 ===
+// 查询所有文件夹
+const folders = await orm.users.driveItems('user-id')
+  .query()
+  .where('folder', 'ne', null)
+  .select(['id', 'name', 'folder'])
+  .get();
+
+// 查询最近修改的文件
+const recentFiles = await orm.users.driveItems('user-id')
+  .query()
+  .where('file', 'ne', null)
+  .orderBy('lastModifiedDateTime', 'desc')
+  .top(10)
+  .get();
+
+// CRUD 操作
+const item = await orm.users.driveItems('user-id').findById('item-id');
+await orm.users.driveItems('user-id').update('item-id', { name: '新名称.pdf' });
+await orm.users.driveItems('user-id').delete('item-id');
+
+// === Service 方式：业务逻辑操作 ===
 // 上传和下载
 await orm.files.uploadSmallFile('user-id', '/Documents/report.pdf', buffer);
 const downloadUrl = await orm.files.downloadFile('user-id', 'file-id');
@@ -254,7 +289,7 @@ const downloadUrl = await orm.files.downloadFile('user-id', 'file-id');
 await orm.files.createFolder('user-id', 'root', '工作文档');
 const children = await orm.files.listChildren('user-id', 'folder-id');
 
-// 文件操作
+// 移动、复制
 await orm.files.move('user-id', 'item-id', 'target-folder-id');
 await orm.files.copy('user-id', 'item-id', 'target-folder-id');
 
@@ -269,6 +304,33 @@ const results = await orm.files.search('user-id', '财务报告');
 ### 邮件操作
 
 ```typescript
+// === Repository 方式：使用查询构建器查询邮件 ===
+// 查询未读邮件
+const unreadMails = await orm.users.messages('user-id')
+  .query()
+  .where('isRead', 'eq', false)
+  .orderBy('receivedDateTime', 'desc')
+  .select(['id', 'subject', 'from', 'receivedDateTime'])
+  .top(20)
+  .get();
+
+// 查询重要邮件
+const importantMails = await orm.users.messages('user-id')
+  .query()
+  .where('importance', 'eq', 'high')
+  .get();
+
+// CRUD 操作
+const message = await orm.users.messages('user-id').findById('message-id');
+await orm.users.messages('user-id').update('message-id', { isRead: true });
+await orm.users.messages('user-id').delete('message-id');
+
+// 邮件特定操作（Repository 方法）
+await orm.users.messages('user-id').reply('message-id', '收到');
+await orm.users.messages('user-id').forward('message-id', recipients, '请查看');
+await orm.users.messages('user-id').markAsRead('message-id');
+
+// === Service 方式：业务逻辑操作 ===
 // 发送邮件
 await orm.mail.send('user-id', {
   subject: '会议通知',
@@ -281,55 +343,73 @@ await orm.mail.send('user-id', {
   }
 });
 
-// 读取邮件
+// 快捷访问常用文件夹
 const inbox = await orm.mail.getInbox('user-id', 20);
-const message = await orm.mail.getMessage('user-id', 'message-id');
+const sent = await orm.mail.getSentItems('user-id', 20);
+const drafts = await orm.mail.getDrafts('user-id');
 
-// 邮件操作
-await orm.mail.reply('user-id', 'message-id', '收到');
-await orm.mail.forward('user-id', 'message-id', recipients, '请查看');
-await orm.mail.markAsRead('user-id', 'message-id');
-
-// 附件管理
-const attachments = await orm.mail.getAttachments('user-id', 'message-id');
-await orm.mail.addAttachment('user-id', 'message-id', attachmentData);
+// 文件夹管理
+const folders = await orm.mail.getMailFolders('user-id');
+await orm.mail.createMailFolder('user-id', '工作邮件');
 ```
 
 ### 日历操作
 
 ```typescript
-// 创建事件
-await orm.calendar.createEvent('user-id', {
-  subject: '团队会议',
-  start: {
-    dateTime: '2024-01-15T10:00:00',
-    timeZone: 'China Standard Time'
-  },
-  end: {
-    dateTime: '2024-01-15T11:00:00',
-    timeZone: 'China Standard Time'
-  },
-  attendees: [
-    {
-      type: 'required',
-      emailAddress: { address: 'colleague@example.com' }
-    }
-  ]
-});
+// === Repository 方式：使用查询构建器查询事件 ===
+// 查询本周事件
+const thisWeekEvents = await orm.users.events('user-id')
+  .query()
+  .where('start/dateTime', 'ge', '2024-01-01T00:00:00Z')
+  .where('end/dateTime', 'le', '2024-01-07T23:59:59Z')
+  .orderBy('start/dateTime', 'asc')
+  .get();
 
-// 日历视图
-const events = await orm.calendar.getCalendarView(
+// 查询包含特定关键词的会议
+const meetings = await orm.users.events('user-id')
+  .query()
+  .where('subject', 'contains', '团队会议')
+  .get();
+
+// CRUD 操作
+const event = await orm.users.events('user-id').findById('event-id');
+await orm.users.events('user-id').create({
+  subject: '团队会议',
+  start: { dateTime: '2024-01-15T10:00:00', timeZone: 'China Standard Time' },
+  end: { dateTime: '2024-01-15T11:00:00', timeZone: 'China Standard Time' }
+});
+await orm.users.events('user-id').update('event-id', { subject: '更新的标题' });
+await orm.users.events('user-id').delete('event-id');
+
+// 事件特定操作（Repository 方法）
+await orm.users.events('user-id').accept('event-id', '我会参加');
+await orm.users.events('user-id').decline('event-id', '时间冲突');
+await orm.users.events('user-id').cancel('event-id', '会议取消');
+
+// === Service 方式：业务逻辑操作 ===
+// 日历视图（特殊 API）
+const calendarView = await orm.calendar.getCalendarView(
   'user-id',
   '2024-01-01T00:00:00Z',
   '2024-01-31T23:59:59Z'
 );
 
-// 事件响应
-await orm.calendar.acceptEvent('user-id', 'event-id', '我会参加');
-await orm.calendar.declineEvent('user-id', 'event-id', '时间冲突');
+// 日历管理
+const calendars = await orm.calendar.getCalendars('user-id');
+await orm.calendar.createCalendar('user-id', { name: '工作日历' });
 
-// 会议室
+// 会议室查找
 const rooms = await orm.calendar.findRooms('user-id');
+const roomLists = await orm.calendar.findRoomLists('user-id');
+
+// 查找会议时间
+const suggestions = await orm.calendar.findMeetingTimes(
+  [{ emailAddress: { address: 'user@contoso.com' }, type: 'required' }],
+  { timeslots: [{ start: startTime, end: endTime }] },
+  'PT1H'  // 1小时会议
+);
+
+// 忙闲时间表
 const schedule = await orm.calendar.getSchedule(
   ['user1@contoso.com', 'room@contoso.com'],
   startTime,

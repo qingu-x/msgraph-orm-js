@@ -1,7 +1,10 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import { GraphRepository } from '../repository';
-import { User, Group, Message, Event, Drive, LicenseDetails, MailboxSettings } from '../types';
+import { User, Group, Drive, LicenseDetails, MailboxSettings } from '../types';
 import { GraphOrmError } from '../errors';
+import { MessageRepository } from './message.repository';
+import { EventRepository } from './event.repository';
+import { DriveItemRepository } from './drive-item.repository';
 
 /**
  * 用户仓储
@@ -60,24 +63,44 @@ export class UserRepository extends GraphRepository<User> {
   }
 
   /**
-   * 获取用户的邮件
+   * 获取用户的邮件仓储
+   * 
+   * 返回 MessageRepository，支持查询构建器和邮件特定操作
    */
-  messages(userId: string) {
-    return this.subRepository<Message>(userId, 'messages');
+  messages(userId: string): MessageRepository {
+    const endpoint = `/users/${encodeURIComponent(userId)}/messages`;
+    return new MessageRepository(this.client, endpoint);
   }
 
   /**
-   * 获取用户的事件
+   * 获取用户的事件仓储（默认日历）
+   * 
+   * 返回 EventRepository，支持查询构建器和事件特定操作
+   * 
+   * 注意：这是访问用户默认日历的快捷方式
+   * 如果需要访问特定日历，请使用 CalendarService
    */
-  events(userId: string) {
-    return this.subRepository<Event>(userId, 'events');
+  events(userId: string): EventRepository {
+    const endpoint = `/users/${encodeURIComponent(userId)}/events`;
+    return new EventRepository(this.client, endpoint);
   }
 
   /**
-   * 获取用户的日历事件
+   * 获取用户的日历事件仓储
    */
-  calendarEvents(userId: string) {
-    return this.subRepository<Event>(userId, 'calendar/events');
+  calendarEvents(userId: string): EventRepository {
+    const endpoint = `/users/${encodeURIComponent(userId)}/calendar/events`;
+    return new EventRepository(this.client, endpoint);
+  }
+
+  /**
+   * 获取用户的驱动器项仓储
+   * 
+   * 返回 DriveItemRepository，支持查询构建器和文件特定操作
+   */
+  driveItems(userId: string): DriveItemRepository {
+    const endpoint = `/users/${encodeURIComponent(userId)}/drive/items`;
+    return new DriveItemRepository(this.client, endpoint);
   }
 
   /**

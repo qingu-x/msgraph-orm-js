@@ -5,9 +5,10 @@ import { GraphOrmError, GraphErrorCode } from '../errors';
 /**
  * 日历服务
  * 
- * 提供日历和事件管理功能
+ * 提供日历相关的业务逻辑功能
+ * 基本的事件 CRUD 请使用 EventRepository
  * 
- * 权限要求：Calendars.Read, Calendars.ReadWrite
+ * 权限要求：Calendars.Read, Calendars.ReadWrite, Place.Read.All
  * 国家云支持：✓ 全球版 ✓ 中国版 ✓ 美国政府版
  * 
  * @see https://learn.microsoft.com/graph/api/resources/calendar
@@ -71,27 +72,9 @@ export class CalendarService {
   }
 
   /**
-   * 获取事件列表
-   */
-  async getEvents(userId: string, top?: number): Promise<Event[]> {
-    try {
-      let request = this.client
-        .api(`/users/${encodeURIComponent(userId)}/events`)
-        .orderby('start/dateTime');
-      
-      if (top) {
-        request = request.top(top);
-      }
-      
-      const response = await request.get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
    * 获取日历视图（指定时间范围的事件）
+   * 
+   * 这是一个特殊的 API，不同于普通的事件查询
    */
   async getCalendarView(
     userId: string,
@@ -114,122 +97,9 @@ export class CalendarService {
   }
 
   /**
-   * 获取单个事件
-   */
-  async getEvent(userId: string, eventId: string): Promise<Event> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/events/${encodeURIComponent(eventId)}`)
-        .get();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 创建事件
-   */
-  async createEvent(userId: string, event: Omit<Event, 'id'>): Promise<Event> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/events`)
-        .post(event);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 更新事件
-   */
-  async updateEvent(userId: string, eventId: string, updates: Partial<Event>): Promise<Event> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/events/${encodeURIComponent(eventId)}`)
-        .patch(updates);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 删除事件
-   */
-  async deleteEvent(userId: string, eventId: string): Promise<void> {
-    try {
-      await this.client
-        .api(`/users/${encodeURIComponent(userId)}/events/${encodeURIComponent(eventId)}`)
-        .delete();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 接受事件邀请
-   */
-  async acceptEvent(userId: string, eventId: string, comment?: string): Promise<void> {
-    try {
-      await this.client
-        .api(`/users/${encodeURIComponent(userId)}/events/${encodeURIComponent(eventId)}/accept`)
-        .post({
-          comment: comment || '',
-          sendResponse: true
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 暂时接受事件邀请
-   */
-  async tentativelyAcceptEvent(userId: string, eventId: string, comment?: string): Promise<void> {
-    try {
-      await this.client
-        .api(`/users/${encodeURIComponent(userId)}/events/${encodeURIComponent(eventId)}/tentativelyAccept`)
-        .post({
-          comment: comment || '',
-          sendResponse: true
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 拒绝事件邀请
-   */
-  async declineEvent(userId: string, eventId: string, comment?: string): Promise<void> {
-    try {
-      await this.client
-        .api(`/users/${encodeURIComponent(userId)}/events/${encodeURIComponent(eventId)}/decline`)
-        .post({
-          comment: comment || '',
-          sendResponse: true
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 取消事件
-   */
-  async cancelEvent(userId: string, eventId: string, comment?: string): Promise<void> {
-    try {
-      await this.client
-        .api(`/users/${encodeURIComponent(userId)}/events/${encodeURIComponent(eventId)}/cancel`)
-        .post({
-          comment: comment || ''
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
    * 获取忙/闲时间表
+   * 
+   * 查询指定用户或资源的忙闲状态
    */
   async getSchedule(
     schedules: string[],
@@ -253,6 +123,8 @@ export class CalendarService {
 
   /**
    * 查找会议时间
+   * 
+   * 根据与会者的日历自动寻找可用的会议时间
    */
   async findMeetingTimes(
     attendees: Array<{ emailAddress: { address: string; name?: string }; type: string }>,
@@ -373,6 +245,8 @@ export class CalendarService {
 
   /**
    * 事件增量查询
+   * 
+   * 跟踪事件的变化（新增、修改、删除）
    */
   async deltaEvents(userId: string, deltaLink?: string): Promise<DeltaCollection<Event>> {
     try {
@@ -391,55 +265,4 @@ export class CalendarService {
       throw GraphOrmError.fromGraphError(error);
     }
   }
-
-  /**
-   * 获取事件实例（针对循环事件）
-   */
-  async getEventInstances(
-    userId: string,
-    eventId: string,
-    startDateTime: string,
-    endDateTime: string
-  ): Promise<Event[]> {
-    try {
-      const response = await this.client
-        .api(`/users/${encodeURIComponent(userId)}/events/${encodeURIComponent(eventId)}/instances`)
-        .query({
-          startDateTime,
-          endDateTime
-        })
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 获取事件附件
-   */
-  async getEventAttachments(userId: string, eventId: string): Promise<unknown[]> {
-    try {
-      const response = await this.client
-        .api(`/users/${encodeURIComponent(userId)}/events/${encodeURIComponent(eventId)}/attachments`)
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 添加事件附件
-   */
-  async addEventAttachment(userId: string, eventId: string, attachment: unknown): Promise<unknown> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/events/${encodeURIComponent(eventId)}/attachments`)
-        .post(attachment);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
 }
-

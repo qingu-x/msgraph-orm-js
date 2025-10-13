@@ -293,6 +293,42 @@ export interface DriveItem extends GraphEntity {
   };
 }
 
+// 权限实体
+export interface Permission extends GraphEntity {
+  roles?: string[];
+  link?: {
+    type?: string;
+    scope?: string;
+    webUrl?: string;
+    webHtml?: string;
+  };
+  grantedTo?: {
+    user?: {
+      id?: string;
+      displayName?: string;
+    };
+    application?: {
+      id?: string;
+      displayName?: string;
+    };
+  };
+  grantedToIdentities?: Array<{
+    user?: {
+      id?: string;
+      displayName?: string;
+    };
+  }>;
+  invitation?: {
+    email?: string;
+    signInRequired?: boolean;
+  };
+  inheritedFrom?: {
+    driveId?: string;
+    id?: string;
+    path?: string;
+  };
+}
+
 // 站点实体
 export interface Site extends GraphEntity {
   displayName: string;

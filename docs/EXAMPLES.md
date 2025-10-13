@@ -57,6 +57,65 @@ const client = Client.initWithMiddleware({
 const orm = createGraphORM(client);
 ```
 
+## 架构说明：Repository vs Service
+
+新版 ORM 采用清晰的架构设计：
+
+### Repository（仓储）- 实体 CRUD 和查询
+
+用于实体的标准 CRUD 操作，支持查询构建器：
+
+```typescript
+// ✅ 使用 Repository 的场景：
+// 1. 需要复杂查询条件
+const unreadMessages = await orm.users.messages('user-id')
+  .query()
+  .where('isRead', 'eq', false)
+  .orderBy('receivedDateTime', 'desc')
+  .top(10)
+  .get();
+
+// 2. 标准 CRUD 操作
+const event = await orm.users.events('user-id').findById('event-id');
+await orm.users.events('user-id').create({ subject: '会议' });
+await orm.users.events('user-id').update('event-id', { subject: '新标题' });
+await orm.users.events('user-id').delete('event-id');
+
+// 3. 实体特定操作
+await orm.users.messages('user-id').reply('message-id', '收到');
+await orm.users.events('user-id').accept('event-id', '我会参加');
+```
+
+### Service（服务）- 业务逻辑
+
+用于特定领域的业务功能：
+
+```typescript
+// ✅ 使用 Service 的场景：
+// 1. 业务操作（不是简单的 CRUD）
+await orm.mail.send('user-id', message);  // 发送邮件
+await orm.files.uploadSmallFile('user-id', path, buffer);  // 上传文件
+
+// 2. 特殊 API
+const calendarView = await orm.calendar.getCalendarView('user-id', start, end);
+const rooms = await orm.calendar.findRooms('user-id');
+
+// 3. 快捷访问
+const inbox = await orm.mail.getInbox('user-id', 20);  // 直接获取收件箱
+const drafts = await orm.mail.getDrafts('user-id');    // 直接获取草稿箱
+```
+
+### 选择原则
+
+| 功能 | 使用 Repository | 使用 Service |
+|------|----------------|--------------|
+| 查询过滤 | ✅ | ❌ |
+| 复杂条件 | ✅ | ❌ |
+| CRUD 操作 | ✅ | 部分支持 |
+| 业务逻辑 | ❌ | ✅ |
+| 特殊 API | ❌ | ✅ |
+| 快捷方法 | ❌ | ✅ |
+
 ## 用户管理
 
 ### 基本操作
@@ -114,14 +173,26 @@ const manager = await orm.users.getManager('user-id');
 // 获取用户的直接下属
 const directReports = await orm.users.directReports('user-id').findMany();
 
-// 获取用户的邮件
-const messages = await orm.users.messages('user-id').findMany();
+// 获取用户的邮件（使用 Repository，支持查询构建器）
+const messages = await orm.users.messages('user-id')
+  .query()
+  .where('isRead', 'eq', false)
+  .top(10)
+  .get();
 
-// 获取用户的事件
-const events = await orm.users.events('user-id').findMany();
+// 获取用户的事件（使用 Repository，支持查询构建器）
+const events = await orm.users.events('user-id')
+  .query()
+  .where('start/dateTime', 'ge', new Date().toISOString())
+  .orderBy('start/dateTime', 'asc')
+  .get();
 
-// 获取用户的日历事件
-const calendarEvents = await orm.users.calendarEvents('user-id').findMany();
+// 获取用户的文件（使用 Repository，支持查询构建器）
+const files = await orm.users.driveItems('user-id')
+  .query()
+  .where('file', 'ne', null)
+  .orderBy('lastModifiedDateTime', 'desc')
+  .get();
 ```
 
 ### 用户许可证
@@ -360,24 +431,55 @@ const recentFiles = await files.getRecentFiles();
 
 ## 邮件操作
 
-### 读取邮件
+> **💡 Repository vs Service**
+> 
+> - **Repository (`orm.users.messages()`)**: 用于 CRUD 操作和复杂查询，支持查询构建器
+> - **Service (`orm.mail`)**: 用于业务逻辑操作，如发送邮件、管理文件夹
+
+### 使用 Repository 查询邮件
+
+```typescript
+// 使用查询构建器进行复杂查询
+const unreadMails = await orm.users.messages('user-id')
+  .query()
+  .where('isRead', 'eq', false)
+  .orderBy('receivedDateTime', 'desc')
+  .select(['id', 'subject', 'from', 'receivedDateTime'])
+  .top(20)
+  .get();
+
+// 查询重要邮件
+const importantMails = await orm.users.messages('user-id')
+  .query()
+  .where('importance', 'eq', 'high')
+  .get();
+
+// 查询带附件的邮件
+const mailsWithAttachments = await orm.users.messages('user-id')
+  .query()
+  .where('hasAttachments', 'eq', true)
+  .get();
+
+// CRUD 操作
+const message = await orm.users.messages('user-id').findById('message-id');
+await orm.users.messages('user-id').update('message-id', { isRead: true });
+await orm.users.messages('user-id').delete('message-id');
+
+// 邮件特定操作
+await orm.users.messages('user-id').reply('message-id', '收到，谢谢');
+await orm.users.messages('user-id').markAsRead('message-id');
+await orm.users.messages('user-id').markAsImportant('message-id');
+```
+
+### 使用 Service 进行业务操作
 
 ```typescript
 const mail = orm.mail;
 
-// 获取所有邮件
-const messages = await mail.getMessages('user-id', 20);
-
-// 获取收件箱
+// 快捷访问常用文件夹
 const inbox = await mail.getInbox('user-id', 20);
-
-// 获取已发送邮件
 const sentItems = await mail.getSentItems('user-id', 20);
-
-// 获取草稿
 const drafts = await mail.getDrafts('user-id');
-
-// 获取指定文件夹的邮件
 const folderMessages = await mail.getMessagesInFolder('user-id', 'folder-id');
 
 // 获取单个邮件

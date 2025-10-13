@@ -6,5 +6,8 @@
 
 export * from './user.repository';
 export * from './group.repository';
+export * from './event.repository';
+export * from './message.repository';
+export * from './drive-item.repository';
 export { GraphRepository, GenericRepository } from '../repository';
 

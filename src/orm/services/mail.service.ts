@@ -1,11 +1,12 @@
 import { Client } from '@microsoft/microsoft-graph-client';
-import { Message, Attachment, FileAttachment, MailFolder, DeltaCollection } from '../types';
+import { Message, MailFolder, DeltaCollection } from '../types';
 import { GraphOrmError } from '../errors';
 
 /**
  * 邮件服务
  * 
- * 提供邮件发送、接收和管理功能
+ * 提供邮件相关的业务逻辑功能
+ * 基本的邮件 CRUD 请使用 MessageRepository
  * 
  * 权限要求：Mail.Read, Mail.ReadWrite, Mail.Send
  * 国家云支持：✓ 全球版 ✓ 中国版 ✓ 美国政府版
@@ -16,20 +17,44 @@ export class MailService {
   constructor(private client: Client) {}
 
   /**
-   * 获取用户所有邮件
+   * 发送邮件
+   * 
+   * 权限要求：Mail.Send
    */
-  async getMessages(userId: string, top?: number): Promise<Message[]> {
+  async send(userId: string, message: Omit<Message, 'id'>): Promise<void> {
     try {
-      let request = this.client
+      await this.client
+        .api(`/users/${encodeURIComponent(userId)}/sendMail`)
+        .post({
+          message,
+          saveToSentItems: true
+        });
+    } catch (error) {
+      throw GraphOrmError.fromGraphError(error);
+    }
+  }
+
+  /**
+   * 发送草稿邮件
+   */
+  async sendDraft(userId: string, messageId: string): Promise<void> {
+    try {
+      await this.client
+        .api(`/users/${encodeURIComponent(userId)}/messages/${encodeURIComponent(messageId)}/send`)
+        .post({});
+    } catch (error) {
+      throw GraphOrmError.fromGraphError(error);
+    }
+  }
+
+  /**
+   * 创建草稿
+   */
+  async createDraft(userId: string, message: Omit<Message, 'id'>): Promise<Message> {
+    try {
+      return await this.client
         .api(`/users/${encodeURIComponent(userId)}/messages`)
-        .orderby('receivedDateTime DESC');
-      
-      if (top) {
-        request = request.top(top);
-      }
-      
-      const response = await request.get();
-      return response.value || [];
+        .post(message);
     } catch (error) {
       throw GraphOrmError.fromGraphError(error);
     }
@@ -37,6 +62,8 @@ export class MailService {
 
   /**
    * 获取收件箱邮件
+   * 
+   * 快捷方法，等同于获取 inbox 文件夹的邮件
    */
   async getInbox(userId: string, top?: number): Promise<Message[]> {
     try {
@@ -82,7 +109,7 @@ export class MailService {
     try {
       let request = this.client
         .api(`/users/${encodeURIComponent(userId)}/mailFolders/drafts/messages`)
-        .orderby('createdDateTime DESC');
+        .orderby('lastModifiedDateTime DESC');
       
       if (top) {
         request = request.top(top);
@@ -90,219 +117,6 @@ export class MailService {
       
       const response = await request.get();
       return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 获取指定文件夹的邮件
-   */
-  async getMessagesInFolder(userId: string, folderId: string, top?: number): Promise<Message[]> {
-    try {
-      let request = this.client
-        .api(`/users/${encodeURIComponent(userId)}/mailFolders/${encodeURIComponent(folderId)}/messages`)
-        .orderby('receivedDateTime DESC');
-      
-      if (top) {
-        request = request.top(top);
-      }
-      
-      const response = await request.get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 获取单个邮件
-   */
-  async getMessage(userId: string, messageId: string): Promise<Message> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/messages/${encodeURIComponent(messageId)}`)
-        .get();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 发送邮件
-   */
-  async send(userId: string, message: Partial<Message>, saveToSentItems: boolean = true): Promise<void> {
-    try {
-      await this.client
-        .api(`/users/${encodeURIComponent(userId)}/sendMail`)
-        .post({
-          message,
-          saveToSentItems
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 创建草稿
-   */
-  async createDraft(userId: string, message: Partial<Message>): Promise<Message> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/messages`)
-        .post(message);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 更新邮件（例如标记为已读）
-   */
-  async updateMessage(userId: string, messageId: string, updates: Partial<Message>): Promise<Message> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/messages/${encodeURIComponent(messageId)}`)
-        .patch(updates);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 删除邮件
-   */
-  async deleteMessage(userId: string, messageId: string): Promise<void> {
-    try {
-      await this.client
-        .api(`/users/${encodeURIComponent(userId)}/messages/${encodeURIComponent(messageId)}`)
-        .delete();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 移动邮件到文件夹
-   */
-  async moveMessage(userId: string, messageId: string, destinationFolderId: string): Promise<Message> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/messages/${encodeURIComponent(messageId)}/move`)
-        .post({
-          destinationId: destinationFolderId
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 复制邮件到文件夹
-   */
-  async copyMessage(userId: string, messageId: string, destinationFolderId: string): Promise<Message> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/messages/${encodeURIComponent(messageId)}/copy`)
-        .post({
-          destinationId: destinationFolderId
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 回复邮件
-   */
-  async reply(userId: string, messageId: string, comment?: string): Promise<void> {
-    try {
-      await this.client
-        .api(`/users/${encodeURIComponent(userId)}/messages/${encodeURIComponent(messageId)}/reply`)
-        .post({
-          comment: comment || ''
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 全部回复
-   */
-  async replyAll(userId: string, messageId: string, comment?: string): Promise<void> {
-    try {
-      await this.client
-        .api(`/users/${encodeURIComponent(userId)}/messages/${encodeURIComponent(messageId)}/replyAll`)
-        .post({
-          comment: comment || ''
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 转发邮件
-   */
-  async forward(
-    userId: string,
-    messageId: string,
-    toRecipients: Array<{ emailAddress: { address: string; name?: string } }>,
-    comment?: string
-  ): Promise<void> {
-    try {
-      await this.client
-        .api(`/users/${encodeURIComponent(userId)}/messages/${encodeURIComponent(messageId)}/forward`)
-        .post({
-          toRecipients,
-          comment: comment || ''
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 获取邮件附件
-   */
-  async getAttachments(userId: string, messageId: string): Promise<Attachment[]> {
-    try {
-      const response = await this.client
-        .api(`/users/${encodeURIComponent(userId)}/messages/${encodeURIComponent(messageId)}/attachments`)
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 添加附件
-   */
-  async addAttachment(
-    userId: string,
-    messageId: string,
-    attachment: Omit<FileAttachment, 'id'>
-  ): Promise<Attachment> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/messages/${encodeURIComponent(messageId)}/attachments`)
-        .post(attachment);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
-   * 删除附件
-   */
-  async deleteAttachment(userId: string, messageId: string, attachmentId: string): Promise<void> {
-    try {
-      await this.client
-        .api(`/users/${encodeURIComponent(userId)}/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`)
-        .delete();
     } catch (error) {
       throw GraphOrmError.fromGraphError(error);
     }
@@ -325,15 +139,32 @@ export class MailService {
   /**
    * 创建邮件文件夹
    */
-  async createMailFolder(userId: string, displayName: string, parentFolderId?: string): Promise<MailFolder> {
+  async createMailFolder(
+    userId: string,
+    displayName: string,
+    isHidden: boolean = false
+  ): Promise<MailFolder> {
     try {
-      const endpoint = parentFolderId
-        ? `/users/${encodeURIComponent(userId)}/mailFolders/${encodeURIComponent(parentFolderId)}/childFolders`
-        : `/users/${encodeURIComponent(userId)}/mailFolders`;
-
       return await this.client
-        .api(endpoint)
-        .post({ displayName });
+        .api(`/users/${encodeURIComponent(userId)}/mailFolders`)
+        .post({
+          displayName,
+          isHidden
+        });
+    } catch (error) {
+      throw GraphOrmError.fromGraphError(error);
+    }
+  }
+
+  /**
+   * 获取子文件夹
+   */
+  async getChildFolders(userId: string, parentFolderId: string): Promise<MailFolder[]> {
+    try {
+      const response = await this.client
+        .api(`/users/${encodeURIComponent(userId)}/mailFolders/${encodeURIComponent(parentFolderId)}/childFolders`)
+        .get();
+      return response.value || [];
     } catch (error) {
       throw GraphOrmError.fromGraphError(error);
     }
@@ -353,28 +184,9 @@ export class MailService {
   }
 
   /**
-   * 搜索邮件
-   */
-  async search(userId: string, searchQuery: string, top?: number): Promise<Message[]> {
-    try {
-      let request = this.client
-        .api(`/users/${encodeURIComponent(userId)}/messages`)
-        .filter(`contains(subject,'${searchQuery}') or contains(from/emailAddress/name,'${searchQuery}')`)
-        .orderby('receivedDateTime DESC');
-      
-      if (top) {
-        request = request.top(top);
-      }
-      
-      const response = await request.get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
-  }
-
-  /**
    * 邮件增量查询
+   * 
+   * 跟踪邮件的变化（新增、修改、删除）
    */
   async delta(userId: string, deltaLink?: string): Promise<DeltaCollection<Message>> {
     try {
@@ -393,26 +205,4 @@ export class MailService {
       throw GraphOrmError.fromGraphError(error);
     }
   }
-
-  /**
-   * 标记为已读
-   */
-  async markAsRead(userId: string, messageId: string): Promise<Message> {
-    return this.updateMessage(userId, messageId, { isRead: true });
-  }
-
-  /**
-   * 标记为未读
-   */
-  async markAsUnread(userId: string, messageId: string): Promise<Message> {
-    return this.updateMessage(userId, messageId, { isRead: false });
-  }
-
-  /**
-   * 标记为重要
-   */
-  async markAsImportant(userId: string, messageId: string): Promise<Message> {
-    return this.updateMessage(userId, messageId, { importance: 'high' });
-  }
 }
-
