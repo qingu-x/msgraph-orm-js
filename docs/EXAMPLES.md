@@ -1,207 +1,563 @@
-# Microsoft Graph ORM 使用示例
+# Graph ORM 使用示例（新版本）
 
-本文档提供了各种常见场景的完整示例代码。
+本文档展示如何使用新版 Graph ORM 的各种功能。
 
 ## 目录
 
 - [初始化](#初始化)
 - [用户管理](#用户管理)
-- [日历管理](#日历管理)
-- [邮件管理](#邮件管理)
-- [文件管理](#文件管理)
-- [Teams 协作](#teams-协作)
-- [SharePoint](#sharepoint)
-- [报告和分析](#报告和分析)
+- [组管理](#组管理)
+- [文件操作](#文件操作)
+- [邮件操作](#邮件操作)
+- [日历操作](#日历操作)
 - [高级查询](#高级查询)
-- [查看 ORM 生成的请求参数](#查看-orm-生成的请求参数)
+- [增量查询](#增量查询)
+- [批处理](#批处理)
 
 ## 初始化
 
-### 使用客户端凭据认证
+```typescript
+import { GraphClient, defaultEndpoints, createGraphORM } from '@qingu-x/msgraph-orm-js';
+
+// 方式一：使用客户端凭据（应用权限）
+const graphClient = new GraphClient(
+  {
+    tenantId: 'your-tenant-id',
+    clientId: 'your-client-id',
+    clientSecret: 'your-client-secret'
+  },
+  defaultEndpoints.global  // 全球版端点
+);
+
+const client = graphClient.getGraphClient();
+
+// 创建 ORM 实例
+const orm = createGraphORM(client);
+```
+
+### 使用委托权限（可选）
+
+如果你有现成的访问令牌：
 
 ```typescript
 import { Client } from '@microsoft/microsoft-graph-client';
-import { ClientCredentialsAuthProvider, createGraphORM } from '@qingu-x/msgraph-orm-js';
+import { createGraphORM } from '@qingu-x/msgraph-orm-js';
 
-// 创建认证提供者
-const authProvider = new ClientCredentialsAuthProvider({
-  tenantId: 'your-tenant-id',
-  clientId: 'your-client-id',
-  clientSecret: 'your-client-secret',
-  // 可选：指定国家云
-  // cloudEndpoint: 'https://microsoftgraph.chinacloudapi.cn' // 中国版
-});
-
-// 创建 Graph 客户端
+// 使用自定义认证提供者
 const client = Client.initWithMiddleware({
-  authProvider
+  authProvider: {
+    getAccessToken: async () => {
+      // 返回访问令牌
+      return 'your-access-token';
+    }
+  }
 });
 
 // 创建 ORM 实例
 const orm = createGraphORM(client);
 ```
 
-### 使用委托权限认证
-
-```typescript
-import { Client } from '@microsoft/microsoft-graph-client';
-import { createGraphORM } from '@qingu-x/msgraph-orm-js';
-
-// 使用已有的访问令牌
-const client = Client.init({
-  authProvider: (done) => {
-    done(null, accessToken);
-  }
-});
-
-const orm = createGraphORM(client);
-```
-
 ## 用户管理
 
-### 获取所有用户
+### 基本操作
 
 ```typescript
-// 获取前 10 个用户
-const users = await orm.users
-  .query()
-  .select(['id', 'displayName', 'mail'])
-  .top(10)
-  .get();
-
+// 获取所有用户
+const users = await orm.users.findMany();
+console.log('用户总数:', users.meta.count);
 console.log('用户列表:', users.data);
-```
 
-### 查询特定用户
-
-```typescript
-// 按条件查询
-const managers = await orm.users
-  .query()
-  .where('jobTitle', 'contains', '经理')
-  .and('accountEnabled', 'eq', true)
-  .orderBy('displayName', 'asc')
-  .get();
-
-// 获取单个用户
+// 通过 ID 获取用户
 const user = await orm.users.findById('user-id');
-console.log('用户信息:', user.displayName, user.mail);
-```
+console.log('用户:', user.displayName);
 
-### 创建用户
+// 通过邮箱查找用户
+const userByEmail = await orm.users.findByEmail('user@example.com');
 
-```typescript
+// 通过 UPN 查找用户
+const userByUpn = await orm.users.findByUserPrincipalName('user@contoso.com');
+
+// 检查用户是否存在
+const exists = await orm.users.exists('user-id');
+
+// 创建用户
 const newUser = await orm.users.create({
-  accountEnabled: true,
   displayName: '张三',
-  mailNickname: 'zhangsan',
   userPrincipalName: 'zhangsan@contoso.com',
+  mailNickname: 'zhangsan',
+  accountEnabled: true,
   passwordProfile: {
-    forceChangePasswordNextSignIn: true,
-    password: 'TempPassword123!'
+    password: 'TempPassword123!',
+    forceChangePasswordNextSignIn: true
   }
 });
 
-console.log('创建的用户 ID:', newUser.id);
-```
-
-### 更新用户
-
-```typescript
+// 更新用户
 const updatedUser = await orm.users.update('user-id', {
   jobTitle: '高级工程师',
   department: '技术部'
 });
+
+// 删除用户
+await orm.users.delete('user-id');
 ```
 
-### 管理用户许可证
+### 用户关系
+
+```typescript
+// 获取用户所属的组
+const userGroups = await orm.users.groups('user-id').findMany();
+
+// 获取用户的经理
+const manager = await orm.users.getManager('user-id');
+
+// 获取用户的直接下属
+const directReports = await orm.users.directReports('user-id').findMany();
+
+// 获取用户的邮件
+const messages = await orm.users.messages('user-id').findMany();
+
+// 获取用户的事件
+const events = await orm.users.events('user-id').findMany();
+
+// 获取用户的日历事件
+const calendarEvents = await orm.users.calendarEvents('user-id').findMany();
+```
+
+### 用户许可证
 
 ```typescript
 // 获取用户许可证
-const licenses = await orm.getUserLicenses('user-id');
+const licenses = await orm.users.getLicenses('user-id');
 
-// 为用户分配许可证
-await orm.assignUserLicense('user-id', [
+// 分配许可证
+await orm.users.assignLicense('user-id', [
   {
-    skuId: 'license-sku-id',
-    disabledPlans: [] // 可选：禁用某些服务计划
+    skuId: 'sku-id',
+    disabledPlans: []
   }
 ], []);
-
-// 获取组织的所有 SKU
-const skus = await orm.getSubscribedSkus();
-console.log('可用许可证:', skus);
 ```
 
-### 组管理
+### 用户设置
 
 ```typescript
-// 获取所有组
-const groups = await orm.groups.query().get();
+// 获取邮箱设置
+const mailboxSettings = await orm.users.getMailboxSettings('user-id');
 
-// 获取组成员
-const members = await orm.groupMembers('group-id').query().get();
-
-// 获取组所有者
-const owners = await orm.groupOwners('group-id').query().get();
-
-// 创建 Microsoft 365 组
-const newGroup = await orm.groups.create({
-  displayName: '项目团队',
-  description: '项目协作组',
-  mailNickname: 'projectteam',
-  mailEnabled: true,
-  securityEnabled: false,
-  groupTypes: ['Unified'] // Microsoft 365 组
+// 更新邮箱设置
+await orm.users.updateMailboxSettings('user-id', {
+  timeZone: 'China Standard Time',
+  language: {
+    locale: 'zh-CN'
+  }
 });
 ```
 
-## 日历管理
-
-### 获取用户日历事件
+### 用户照片
 
 ```typescript
-// 获取用户的所有事件
-const events = await orm.events('user@contoso.com')
-  .query()
-  .select(['subject', 'start', 'end', 'location'])
-  .orderBy('start/dateTime', 'asc')
-  .top(20)
-  .get();
+// 获取用户照片元数据
+const photoMeta = await orm.users.getPhotoMetadata('user-id');
 
-console.log('日历事件:', events.data);
+// 获取用户照片内容
+const photoBlob = await orm.users.getPhotoContent('user-id');
 ```
 
-### 获取日历视图（指定时间范围）
+## 组管理
+
+### 基本操作
 
 ```typescript
-const now = new Date();
-const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+// 获取所有组
+const groups = await orm.groups.findMany();
 
-const upcomingEvents = await orm.getCalendarView(
-  'user@contoso.com',
-  now.toISOString(),
-  nextWeek.toISOString()
+// 通过 ID 获取组
+const group = await orm.groups.findById('group-id');
+
+// 通过邮箱查找组
+const groupByEmail = await orm.groups.findByEmail('group@example.com');
+
+// 搜索组
+const searchResults = await orm.groups.search('技术部');
+
+// 创建组
+const newGroup = await orm.groups.create({
+  displayName: '技术部',
+  mailNickname: 'techteam',
+  mailEnabled: true,
+  securityEnabled: true,
+  groupTypes: ['Unified']
+});
+
+// 更新组
+await orm.groups.update('group-id', {
+  description: '技术部门团队'
+});
+
+// 删除组
+await orm.groups.delete('group-id');
+```
+
+### 组成员管理
+
+```typescript
+// 获取组成员
+const members = await orm.groups.members('group-id').findMany();
+
+// 获取组所有者
+const owners = await orm.groups.owners('group-id').findMany();
+
+// 添加成员
+await orm.groups.addMember('group-id', 'user-id');
+
+// 移除成员
+await orm.groups.removeMember('group-id', 'user-id');
+
+// 添加所有者
+await orm.groups.addOwner('group-id', 'user-id');
+
+// 移除所有者
+await orm.groups.removeOwner('group-id', 'user-id');
+
+// 检查成员身份
+const isMember = await orm.groups.isMember('group-id', 'user-id');
+```
+
+### 组资源
+
+```typescript
+// 获取组关联的团队
+const team = await orm.groups.getTeam('group-id');
+
+// 获取组驱动器
+const drive = await orm.groups.getDrive('group-id');
+
+// 获取组事件
+const groupEvents = await orm.groups.events('group-id').findMany();
+
+// 获取组日历事件
+const calendarEvents = await orm.groups.calendarEvents('group-id').findMany();
+```
+
+## 文件操作
+
+### 基本操作
+
+```typescript
+const files = orm.files;
+
+// 获取用户根目录的文件
+const rootItems = await files.getUserRootItems('user-id');
+
+// 获取驱动器项（通过 ID）
+const item = await files.getItem('user-id', 'item-id');
+
+// 获取驱动器项（通过路径）
+const itemByPath = await files.getItemByPath('user-id', '/Documents/report.xlsx');
+
+// 列出文件夹的子项
+const children = await files.listChildren('user-id', 'folder-id');
+```
+
+### 文件上传和下载
+
+```typescript
+// 创建文件夹
+const folder = await files.createFolder('user-id', 'root', '工作文档');
+
+// 上传小文件（< 4MB）
+const uploadedFile = await files.uploadSmallFile(
+  'user-id',
+  '/Documents/report.pdf',
+  fileBuffer,
+  'replace'
 );
 
-console.log('未来一周的事件:', upcomingEvents);
+// 下载文件
+const downloadUrl = await files.downloadFile('user-id', 'file-id');
+
+// 下载为特定格式
+const pdfUrl = await files.downloadAsFormat('user-id', 'word-file-id', 'pdf');
 ```
 
-### 创建日历事件
+### 文件管理
 
 ```typescript
-const newEvent = await orm.events('user@contoso.com').create({
-  subject: '项目会议',
+// 更新文件元数据
+await files.updateMetadata('user-id', 'item-id', {
+  name: '新文件名.xlsx'
+});
+
+// 移动文件
+await files.move('user-id', 'item-id', 'target-folder-id', '新名称.xlsx');
+
+// 复制文件
+const monitorUrl = await files.copy('user-id', 'item-id', 'target-folder-id');
+
+// 删除文件（移到回收站）
+await files.delete('user-id', 'item-id');
+
+// 永久删除文件
+await files.permanentDelete('user-id', 'item-id');
+```
+
+### 文件搜索
+
+```typescript
+// 搜索文件
+const results = await files.search('user-id', '财务报告');
+
+// 增量查询
+const delta = await files.delta('user-id');
+console.log('变化的文件:', delta.data);
+
+// 下次查询使用 deltaLink
+const nextDelta = await files.delta('user-id', delta.meta.deltaLink);
+```
+
+### 文件共享
+
+```typescript
+// 创建共享链接
+const shareLink = await files.createShareLink(
+  'user-id',
+  'item-id',
+  'view',
+  'organization'
+);
+console.log('共享链接:', shareLink.link.webUrl);
+
+// 邀请用户访问
+await files.invite(
+  'user-id',
+  'item-id',
+  ['colleague@example.com'],
+  ['read'],
+  true,
+  '请查看这个文件'
+);
+
+// 列出权限
+const permissions = await files.listPermissions('user-id', 'item-id');
+
+// 删除权限
+await files.deletePermission('user-id', 'item-id', 'permission-id');
+```
+
+### 其他操作
+
+```typescript
+// 获取缩略图
+const thumbnails = await files.getThumbnails('user-id', 'item-id');
+
+// 获取与我共享的文件
+const sharedWithMe = await files.getSharedWithMe();
+
+// 获取最近使用的文件
+const recentFiles = await files.getRecentFiles();
+```
+
+## 邮件操作
+
+### 读取邮件
+
+```typescript
+const mail = orm.mail;
+
+// 获取所有邮件
+const messages = await mail.getMessages('user-id', 20);
+
+// 获取收件箱
+const inbox = await mail.getInbox('user-id', 20);
+
+// 获取已发送邮件
+const sentItems = await mail.getSentItems('user-id', 20);
+
+// 获取草稿
+const drafts = await mail.getDrafts('user-id');
+
+// 获取指定文件夹的邮件
+const folderMessages = await mail.getMessagesInFolder('user-id', 'folder-id');
+
+// 获取单个邮件
+const message = await mail.getMessage('user-id', 'message-id');
+```
+
+### 发送邮件
+
+```typescript
+// 发送邮件
+await mail.send('user-id', {
+  subject: '会议通知',
   body: {
     contentType: 'HTML',
-    content: '讨论项目进展和下一步计划'
+    content: '<h1>下周一开会</h1><p>请准时参加。</p>'
+  },
+  toRecipients: [
+    {
+      emailAddress: {
+        address: 'colleague@example.com',
+        name: '同事'
+      }
+    }
+  ]
+});
+
+// 创建草稿
+const draft = await mail.createDraft('user-id', {
+  subject: '草稿邮件',
+  body: {
+    contentType: 'Text',
+    content: '这是一封草稿'
+  }
+});
+```
+
+### 邮件操作
+
+```typescript
+// 更新邮件（标记为已读）
+await mail.updateMessage('user-id', 'message-id', {
+  isRead: true
+});
+
+// 标记为已读
+await mail.markAsRead('user-id', 'message-id');
+
+// 标记为未读
+await mail.markAsUnread('user-id', 'message-id');
+
+// 标记为重要
+await mail.markAsImportant('user-id', 'message-id');
+
+// 删除邮件
+await mail.deleteMessage('user-id', 'message-id');
+
+// 移动邮件
+await mail.moveMessage('user-id', 'message-id', 'destination-folder-id');
+
+// 复制邮件
+await mail.copyMessage('user-id', 'message-id', 'destination-folder-id');
+```
+
+### 回复和转发
+
+```typescript
+// 回复邮件
+await mail.reply('user-id', 'message-id', '谢谢您的邮件');
+
+// 全部回复
+await mail.replyAll('user-id', 'message-id', '感谢各位');
+
+// 转发邮件
+await mail.forward('user-id', 'message-id', [
+  {
+    emailAddress: {
+      address: 'another@example.com',
+      name: '另一位同事'
+    }
+  }
+], '请查看此邮件');
+```
+
+### 附件管理
+
+```typescript
+// 获取附件
+const attachments = await mail.getAttachments('user-id', 'message-id');
+
+// 添加附件
+await mail.addAttachment('user-id', 'message-id', {
+  '@odata.type': '#microsoft.graph.fileAttachment',
+  name: 'document.pdf',
+  contentBytes: base64Content
+});
+
+// 删除附件
+await mail.deleteAttachment('user-id', 'message-id', 'attachment-id');
+```
+
+### 文件夹管理
+
+```typescript
+// 获取邮件文件夹
+const folders = await mail.getMailFolders('user-id');
+
+// 创建文件夹
+const newFolder = await mail.createMailFolder('user-id', '工作邮件');
+
+// 创建子文件夹
+const subFolder = await mail.createMailFolder('user-id', '项目邮件', 'parent-folder-id');
+
+// 删除文件夹
+await mail.deleteMailFolder('user-id', 'folder-id');
+```
+
+### 搜索和增量查询
+
+```typescript
+// 搜索邮件
+const searchResults = await mail.search('user-id', '项目会议', 10);
+
+// 增量查询
+const delta = await mail.delta('user-id');
+
+// 下次查询
+const nextDelta = await mail.delta('user-id', delta.meta.deltaLink);
+```
+
+## 日历操作
+
+### 日历管理
+
+```typescript
+const calendar = orm.calendar;
+
+// 获取用户主日历
+const userCalendar = await calendar.getUserCalendar('user-id');
+
+// 获取所有日历
+const calendars = await calendar.getCalendars('user-id');
+
+// 创建日历
+const newCalendar = await calendar.createCalendar('user-id', {
+  name: '工作日历'
+});
+
+// 获取日历组
+const calendarGroups = await calendar.getCalendarGroups('user-id');
+```
+
+### 事件管理
+
+```typescript
+// 获取事件列表
+const events = await calendar.getEvents('user-id', 20);
+
+// 获取日历视图（指定时间范围）
+const view = await calendar.getCalendarView(
+  'user-id',
+  '2024-01-01T00:00:00Z',
+  '2024-01-31T23:59:59Z'
+);
+
+// 获取单个事件
+const event = await calendar.getEvent('user-id', 'event-id');
+
+// 创建事件
+const newEvent = await calendar.createEvent('user-id', {
+  subject: '团队会议',
+  body: {
+    contentType: 'HTML',
+    content: '讨论项目进度'
   },
   start: {
-    dateTime: '2025-10-15T10:00:00',
+    dateTime: '2024-01-15T10:00:00',
     timeZone: 'China Standard Time'
   },
   end: {
-    dateTime: '2025-10-15T11:00:00',
+    dateTime: '2024-01-15T11:00:00',
     timeZone: 'China Standard Time'
   },
   location: {
@@ -209,567 +565,209 @@ const newEvent = await orm.events('user@contoso.com').create({
   },
   attendees: [
     {
+      type: 'required',
       emailAddress: {
-        address: 'colleague@contoso.com',
-        name: '李四'
-      },
-      type: 'required'
-    }
-  ],
-  isOnlineMeeting: true,
-  onlineMeetingProvider: 'teamsForBusiness'
-});
-
-console.log('创建的事件 ID:', newEvent.id);
-console.log('在线会议链接:', newEvent.onlineMeetingUrl);
-```
-
-### 查询会议室可用性
-
-```typescript
-// 查找所有会议室
-const rooms = await orm.findRooms('user@contoso.com');
-console.log('可用会议室:', rooms);
-
-// 获取忙/闲信息
-const scheduleInfo = await orm.getSchedule(
-  ['room1@contoso.com', 'room2@contoso.com'],
-  {
-    dateTime: '2025-10-15T09:00:00',
-    timeZone: 'China Standard Time'
-  },
-  {
-    dateTime: '2025-10-15T17:00:00',
-    timeZone: 'China Standard Time'
-  },
-  30 // 30分钟间隔
-);
-
-console.log('会议室忙闲状态:', scheduleInfo);
-```
-
-## 邮件管理
-
-### 读取收件箱
-
-```typescript
-// 获取收件箱邮件
-const messages = await orm.inbox('user@contoso.com')
-  .query()
-  .select(['subject', 'from', 'receivedDateTime', 'isRead'])
-  .orderBy('receivedDateTime', 'desc')
-  .top(10)
-  .get();
-
-console.log('收件箱邮件:', messages.data);
-
-// 只获取未读邮件
-const unreadMessages = await orm.inbox('user@contoso.com')
-  .query()
-  .where('isRead', 'eq', false)
-  .get();
-```
-
-### 发送邮件
-
-```typescript
-await orm.sendMail('user@contoso.com', {
-  subject: '测试邮件',
-  body: {
-    contentType: 'HTML',
-    content: '<h1>你好</h1><p>这是一封测试邮件。</p>'
-  },
-  toRecipients: [
-    {
-      emailAddress: {
-        address: 'recipient@contoso.com',
-        name: '收件人'
-      }
-    }
-  ],
-  ccRecipients: [
-    {
-      emailAddress: {
-        address: 'cc@contoso.com'
+        address: 'colleague@example.com',
+        name: '同事'
       }
     }
   ]
-}, true); // 保存到已发送项目
-
-console.log('邮件发送成功');
-```
-
-### 管理邮件附件
-
-```typescript
-// 获取邮件附件
-const attachments = await orm.getMessageAttachments('user@contoso.com', 'message-id');
-
-// 添加附件
-await orm.addMessageAttachment('user@contoso.com', 'message-id', {
-  '@odata.type': '#microsoft.graph.fileAttachment',
-  name: 'document.pdf',
-  contentType: 'application/pdf',
-  contentBytes: base64Content
 });
+
+// 更新事件
+await calendar.updateEvent('user-id', 'event-id', {
+  subject: '更新的会议主题'
+});
+
+// 删除事件
+await calendar.deleteEvent('user-id', 'event-id');
 ```
 
-### 设置邮箱规则
+### 事件响应
 
 ```typescript
-// 创建邮件规则
-const rule = await orm.messageRules('user@contoso.com').create({
-  displayName: '重要邮件标记',
-  sequence: 1,
-  isEnabled: true,
-  conditions: {
-    fromAddresses: [
+// 接受事件邀请
+await calendar.acceptEvent('user-id', 'event-id', '我会参加');
+
+// 暂时接受
+await calendar.tentativelyAcceptEvent('user-id', 'event-id', '可能参加');
+
+// 拒绝事件
+await calendar.declineEvent('user-id', 'event-id', '时间冲突');
+
+// 取消事件（组织者）
+await calendar.cancelEvent('user-id', 'event-id', '会议取消');
+```
+
+### 会议室
+
+```typescript
+// 获取会议室列表（使用 places API）
+const rooms = await calendar.getRooms();
+
+// 获取会议室列表
+const roomLists = await calendar.getRoomLists();
+
+// 查找用户可访问的会议室
+const userRooms = await calendar.findRooms('user-id');
+
+// 查找会议室列表
+const userRoomLists = await calendar.findRoomLists('user-id');
+
+// 查找指定列表下的会议室
+const roomsInList = await calendar.findRoomsInList(
+  'user-id',
+  'roomlist@contoso.com'
+);
+```
+
+### 忙/闲和查找会议时间
+
+```typescript
+// 获取忙/闲时间表
+const schedule = await calendar.getSchedule(
+  ['user1@contoso.com', 'user2@contoso.com', 'room@contoso.com'],
+  {
+    dateTime: '2024-01-15T09:00:00',
+    timeZone: 'China Standard Time'
+  },
+  {
+    dateTime: '2024-01-15T18:00:00',
+    timeZone: 'China Standard Time'
+  },
+  30
+);
+
+// 查找会议时间
+const meetingTimes = await calendar.findMeetingTimes(
+  [
+    {
+      type: 'required',
+      emailAddress: {
+        address: 'colleague@example.com'
+      }
+    }
+  ],
+  {
+    timeslots: [
       {
-        emailAddress: {
-          address: 'boss@contoso.com'
+        start: {
+          dateTime: '2024-01-15T09:00:00',
+          timeZone: 'China Standard Time'
+        },
+        end: {
+          dateTime: '2024-01-15T18:00:00',
+          timeZone: 'China Standard Time'
         }
       }
-    ],
-    importance: 'high'
+    ]
   },
-  actions: {
-    markImportance: 'high',
-    markAsRead: false
-  }
-});
-```
-
-### 设置自动回复
-
-```typescript
-const settings = await orm.updateMailboxSettings('user@contoso.com', {
-  automaticRepliesSetting: {
-    status: 'scheduled',
-    externalAudience: 'all',
-    internalReplyMessage: '我正在休假，将在下周一回复。',
-    externalReplyMessage: 'I am out of office. Will reply next Monday.',
-    scheduledStartDateTime: {
-      dateTime: '2025-10-20T00:00:00',
-      timeZone: 'China Standard Time'
-    },
-    scheduledEndDateTime: {
-      dateTime: '2025-10-27T23:59:59',
-      timeZone: 'China Standard Time'
-    }
-  }
-});
-```
-
-## 文件管理
-
-### 列出文件
-
-```typescript
-// 获取根目录文件
-const files = await orm.driveItems('user@contoso.com')
-  .query()
-  .select(['name', 'size', 'createdDateTime', 'webUrl'])
-  .orderBy('lastModifiedDateTime', 'desc')
-  .get();
-
-console.log('文件列表:', files.data);
-
-// 获取指定路径的文件
-const documents = await orm.driveItemsByPath('user@contoso.com', '/Documents')
-  .query()
-  .get();
-```
-
-### 搜索文件
-
-```typescript
-const searchResults = await orm.searchDriveItems('user@contoso.com', '财务报告');
-console.log('搜索结果:', searchResults);
-
-// 使用 Microsoft Search API（更强大）
-const results = await orm.searchFiles('季度报告', 25);
-console.log('搜索结果:', results);
-```
-
-### 创建文件夹
-
-```typescript
-const newFolder = await orm.createFolder(
-  'user@contoso.com',
-  'root', // 父文件夹 ID
-  '2025年项目',
-  'rename' // 如果存在则重命名
-);
-
-console.log('创建的文件夹:', newFolder.name);
-```
-
-### 上传文件
-
-```typescript
-// 上传小文件（< 4MB）
-const uploadedFile = await orm.uploadSmallFile(
-  'user@contoso.com',
-  '/Documents/report.pdf',
-  fileBuffer,
-  'rename'
-);
-
-console.log('上传成功:', uploadedFile.webUrl);
-```
-
-### 下载文件
-
-```typescript
-const downloadUrl = await orm.downloadFile('user@contoso.com', 'file-id');
-console.log('下载链接:', downloadUrl);
-
-// 使用 fetch 下载
-const response = await fetch(downloadUrl);
-const blob = await response.blob();
-```
-
-### 文件操作
-
-```typescript
-// 移动文件
-await orm.moveDriveItem(
-  'user@contoso.com',
-  'file-id',
-  'target-folder-id',
-  '新文件名.pdf' // 可选
-);
-
-// 复制文件
-const monitorUrl = await orm.copyDriveItem(
-  'user@contoso.com',
-  'file-id',
-  'target-folder-id'
-);
-console.log('复制操作监控链接:', monitorUrl);
-
-// 删除文件
-await orm.deleteDriveItem('user@contoso.com', 'file-id');
-```
-
-### 共享文件
-
-```typescript
-// 创建共享链接
-const shareLink = await orm.createDriveItemLink(
-  'user@contoso.com',
-  'file-id',
-  'view', // 'view' | 'edit' | 'embed'
-  'organization' // 'anonymous' | 'organization'
-);
-
-console.log('共享链接:', shareLink.link.webUrl);
-
-// 邀请用户访问
-await orm.inviteToDriveItem(
-  'user@contoso.com',
-  'file-id',
-  ['colleague@contoso.com'],
-  ['write'],
-  true, // 发送邀请邮件
-  '请查看这个文件'
+  'PT1H',
+  10
 );
 ```
 
-### 监控文件变化（Delta Query）
+### 其他操作
 
 ```typescript
-// 首次查询
-let result = await orm.deltaDriveItems('user@contoso.com');
-console.log('初始文件:', result.data);
+// 增量查询
+const delta = await calendar.deltaEvents('user-id');
 
-// 保存 deltaLink
-const deltaLink = result.meta.deltaLink;
-
-// 后续查询（只返回变化）
-result = await orm.deltaDriveItems('user@contoso.com', deltaLink);
-console.log('变化的文件:', result.data);
-```
-
-## Teams 协作
-
-### 获取团队信息
-
-```typescript
-// 获取所有团队
-const teams = await orm.teams.query().get();
-
-// 通过组 ID 获取团队
-const team = await orm.getTeamByGroup('group-id');
-
-// 获取频道
-const channels = await orm.channels('team-id').query().get();
-```
-
-### 发送频道消息
-
-```typescript
-const message = await orm.sendChannelMessage('team-id', 'channel-id', {
-  body: {
-    contentType: 'html',
-    content: '<h1>重要通知</h1><p>项目已成功交付！</p>'
-  }
-});
-
-console.log('消息 ID:', message.id);
-```
-
-### 获取聊天消息
-
-```typescript
-// 获取频道消息
-const messages = await orm.channelMessages('team-id', 'channel-id')
-  .query()
-  .orderBy('createdDateTime', 'desc')
-  .top(50)
-  .get();
-
-// 获取消息回复
-const replies = await orm.channelMessageReplies('team-id', 'channel-id', 'message-id')
-  .query()
-  .get();
-```
-
-### 管理团队成员
-
-```typescript
-// 获取团队成员
-const members = await orm.teamMembers('team-id').query().get();
-
-// 添加成员
-await orm.teamMembers('team-id').create({
-  '@odata.type': '#microsoft.graph.aadUserConversationMember',
-  roles: ['owner'], // 或 ['member']
-  'user@odata.bind': `https://graph.microsoft.com/v1.0/users('user-id')`
-});
-```
-
-## SharePoint
-
-### 获取站点
-
-```typescript
-// 获取根站点
-const rootSite = await orm.rootSite;
-
-// 通过路径获取站点
-const site = await orm.getSiteByPath(
-  'contoso.sharepoint.com',
-  '/sites/projectsite'
+// 获取循环事件的实例
+const instances = await calendar.getEventInstances(
+  'user-id',
+  'series-master-id',
+  '2024-01-01T00:00:00Z',
+  '2024-01-31T23:59:59Z'
 );
 
-console.log('站点 ID:', site.id);
-```
+// 获取事件附件
+const eventAttachments = await calendar.getEventAttachments('user-id', 'event-id');
 
-### 列表操作
-
-```typescript
-// 获取站点列表
-const lists = await orm.siteLists('site-id').query().get();
-
-// 获取列表项
-const items = await orm.listItems('site-id', 'list-id')
-  .query()
-  .expand('fields')
-  .get();
-
-// 创建列表项
-const newItem = await orm.listItems('site-id', 'list-id').create({
-  fields: {
-    Title: '新项目',
-    Description: '项目描述',
-    Status: '进行中'
-  }
-});
-```
-
-### 列定义
-
-```typescript
-// 获取列定义
-const columns = await orm.listColumns('site-id', 'list-id').query().get();
-
-// 创建新列
-const newColumn = await orm.listColumns('site-id', 'list-id').create({
-  name: 'Priority',
-  displayName: '优先级',
-  choice: {
-    choices: ['高', '中', '低'],
-    allowTextEntry: false,
-    displayAs: 'dropDownMenu'
-  }
-});
-```
-
-## 报告和分析
-
-### 使用报告
-
-```typescript
-// 获取活跃用户报告（CSV 格式）
-const activeUsers = await orm.getOffice365ActiveUserDetail('D30');
-console.log('30天活跃用户报告:', activeUsers);
-
-// 邮件活动报告
-const emailActivity = await orm.getEmailActivityUserDetail('D7');
-
-// Teams 使用报告
-const teamsUsage = await orm.getTeamsUserActivityUserDetail('D30');
-```
-
-### 审计日志
-
-```typescript
-// 获取目录审计日志
-const audits = await orm.directoryAudits
-  .query()
-  .orderBy('activityDateTime', 'desc')
-  .top(100)
-  .get();
-
-// 获取登录日志
-const signIns = await orm.signInLogs
-  .query()
-  .where('createdDateTime', 'ge', '2025-10-01T00:00:00Z')
-  .and('status/errorCode', 'eq', 0) // 成功登录
-  .get();
-```
-
-### 洞察分析
-
-```typescript
-// 获取趋势文件
-const trending = await orm.trendingInsights('user@contoso.com')
-  .query()
-  .get();
-
-// 获取最近使用的文件
-const used = await orm.usedInsights('user@contoso.com')
-  .query()
-  .get();
-
-// 获取共享的文件
-const shared = await orm.sharedInsights('user@contoso.com')
-  .query()
-  .get();
-```
-
-### 人员分析
-
-```typescript
-// 获取相关人员
-const people = await orm.people('user@contoso.com')
-  .query()
-  .top(10)
-  .get();
-
-console.log('相关人员:', people.data);
+// 添加事件附件
+await calendar.addEventAttachment('user-id', 'event-id', attachmentData);
 ```
 
 ## 高级查询
 
-### 复杂查询条件
+### 链式查询
 
 ```typescript
-// 多条件查询
+// 复杂查询
+const users = await orm.users
+  .query()
+  .where('department', 'eq', 'IT')
+  .and('city', 'Beijing')
+  .select(['id', 'displayName', 'mail', 'jobTitle'])
+  .orderBy('displayName', 'asc')
+  .top(10)
+  .get();
+
+// 使用高级操作符
+const searchUsers = await orm.users
+  .query()
+  .where('displayName', 'startswith', '张')
+  .or('mail', 'contains', 'contoso.com')
+  .get();
+
+// 搜索
 const results = await orm.users
   .query()
-  .where('department', 'eq', '技术部')
-  .and('jobTitle', 'contains', '工程师')
-  .or('jobTitle', 'contains', '架构师')
-  .orderBy('displayName', 'asc')
-  .select(['id', 'displayName', 'jobTitle', 'mail'])
-  .top(50)
+  .search('displayName', '工程师')
+  .top(20)
   .get();
 ```
 
-### 展开关联数据
+### 分页迭代
 
 ```typescript
-// 展开用户的管理者信息
-const usersWithManager = await orm.users
-  .query()
-  .expand('manager')
-  .select(['displayName', 'mail', 'manager'])
-  .get();
-```
+// 自动处理分页
+for await (const user of orm.users.query().pagination()) {
+  console.log(user.displayName);
+}
 
-### 搜索和筛选
-
-```typescript
-// 使用 $search
-const searchResults = await orm.users
-  .query()
-  .search('displayName', '张')
-  .get();
-```
-
-### 查看 ORM 生成的请求参数
-
-```typescript
-// 获取 ORM 生成的完整请求信息（用于调试或日志记录）
-const queryBuilder = orm.users
-  .query()
-  .where('department', 'eq', '技术部')
-  .and('jobTitle', 'contains', '工程师')
-  .select(['id', 'displayName', 'mail'])
-  .orderBy('displayName', 'asc')
-  .top(50);
-
-// 获取请求的原始参数
-const raw = queryBuilder.getRaw();
-
-console.log('端点:', raw.endpoint);
-// 输出: /users
-
-console.log('查询参数:', raw.params);
-// 输出: {
-//   $filter: "department eq '技术部' and contains(jobTitle,'工程师')",
-//   $select: "id,displayName,mail",
-//   $orderby: "displayName asc",
-//   $top: 50
-// }
-
-console.log('请求头:', raw.headers);
-// 输出: { ConsistencyLevel: 'eventual' }
-
-console.log('完整 URL:', raw.url);
-// 输出: /users?$filter=department%20eq%20%27%E6%8A%80%E6%9C%AF%E9%83%A8%27...
-
-// 然后再执行查询
-const result = await queryBuilder.get();
-```
-
-### 分页查询
-
-```typescript
-// 使用分页
-let page = 0;
-let hasMore = true;
-
-while (hasMore) {
-  const result = await orm.users
+// 手动分页
+let nextLink: string | undefined;
+do {
+  const page = await orm.users
     .query()
     .top(100)
-    .skip(page * 100)
+    .skipToken(nextLink)
     .get();
   
-  console.log(`第 ${page + 1} 页，共 ${result.data.length} 条记录`);
+  page.data.forEach(user => {
+    console.log(user.displayName);
+  });
   
-  hasMore = !!result.meta.nextLink;
-  page++;
-}
+  nextLink = page.meta.nextLink;
+} while (nextLink);
 ```
 
-### 批处理请求
+## 增量查询
 
 ```typescript
-// 批量执行多个请求
+// 首次查询
+const initialDelta = await orm.deltaUsers();
+console.log('初始用户数:', initialDelta.data.length);
+
+// 保存 deltaLink
+const deltaLink = initialDelta.meta.deltaLink;
+
+// 后续查询（只返回变化的数据）
+const changes = await orm.deltaUsers(deltaLink);
+console.log('变化的用户:', changes.data);
+
+// 其他资源的增量查询
+const groupDelta = await orm.deltaGroups();
+const messageDelta = await orm.deltaMessages('user-id');
+const eventDelta = await orm.deltaEvents('user-id');
+const fileDelta = await orm.deltaDriveItems('user-id');
+```
+
+## 批处理
+
+```typescript
+// 执行批处理请求（最多 20 个）
 const batchResponse = await orm.batch([
   {
     id: '1',
@@ -783,161 +781,131 @@ const batchResponse = await orm.batch([
   },
   {
     id: '3',
-    method: 'GET',
-    url: '/groups'
+    method: 'PATCH',
+    url: '/users/user3@contoso.com',
+    body: {
+      jobTitle: '高级工程师'
+    },
+    headers: {
+      'Content-Type': 'application/json'
+    }
   }
 ]);
 
 // 处理响应
 batchResponse.responses.forEach(response => {
-  if (response.status === 200) {
-    console.log(`请求 ${response.id} 成功:`, response.body);
-  } else {
-    console.error(`请求 ${response.id} 失败:`, response.status);
-  }
+  console.log(`请求 ${response.id}: 状态 ${response.status}`);
+  console.log('响应:', response.body);
 });
 ```
 
-### Delta Query（变化跟踪）
+## 完整示例
+
+### 用户入职流程
 
 ```typescript
-// 跟踪用户变化
-let deltaLink: string | undefined;
-
-// 首次查询
-const initialResult = await orm.deltaUsers();
-console.log('初始用户数:', initialResult.data.length);
-deltaLink = initialResult.meta.deltaLink;
-
-// 定期查询变化
-setInterval(async () => {
-  const changes = await orm.deltaUsers(deltaLink);
-  
-  if (changes.data.length > 0) {
-    console.log('检测到用户变化:', changes.data.length);
-    
-    // 处理变化
-    changes.data.forEach(user => {
-      if (user['@removed']) {
-        console.log('用户被删除:', user.id);
-      } else {
-        console.log('用户更新:', user.displayName);
-      }
-    });
-  }
-  
-  // 更新 deltaLink
-  deltaLink = changes.meta.deltaLink;
-}, 60000); // 每分钟检查一次
-```
-
-### Webhooks（订阅通知）
-
-```typescript
-// 创建订阅
-const subscription = await orm.createSubscription({
-  changeType: 'created,updated',
-  notificationUrl: 'https://your-app.com/webhooks/graph',
-  resource: 'users',
-  expirationDateTime: new Date(Date.now() + 3600000).toISOString(), // 1小时后过期
-  clientState: 'secret-state-value-12345'
-});
-
-console.log('订阅 ID:', subscription.id);
-
-// 续订
-await orm.renewSubscription(
-  subscription.id,
-  new Date(Date.now() + 3600000).toISOString()
-);
-
-// 删除订阅
-await orm.deleteSubscription(subscription.id);
-```
-
-## 错误处理
-
-```typescript
-import { GraphOrmError, GraphErrorCode } from '@qingu-x/msgraph-orm-js';
-
-try {
-  const user = await orm.users.findById('invalid-id');
-} catch (error) {
-  if (error instanceof GraphOrmError) {
-    console.error('错误代码:', error.code);
-    console.error('错误消息:', error.message);
-    console.error('HTTP 状态:', error.statusCode);
-    console.error('请求 ID:', error.requestId);
-    
-    // 根据错误代码处理
-    switch (error.code) {
-      case GraphErrorCode.RESOURCE_NOT_FOUND:
-        console.log('资源未找到');
-        break;
-      case GraphErrorCode.UNAUTHORIZED:
-        console.log('未授权，请检查权限');
-        break;
-      case GraphErrorCode.THROTTLED:
-        console.log('请求被限流，请稍后重试');
-        break;
+async function onboardUser(email: string, displayName: string) {
+  // 1. 创建用户
+  const user = await orm.users.create({
+    displayName,
+    userPrincipalName: email,
+    mailNickname: email.split('@')[0],
+    accountEnabled: true,
+    passwordProfile: {
+      password: 'TempPass123!',
+      forceChangePasswordNextSignIn: true
     }
-  }
+  });
+
+  // 2. 分配许可证
+  await orm.users.assignLicense(user.id, [
+    { skuId: 'office365-sku-id' }
+  ], []);
+
+  // 3. 添加到组
+  await orm.groups.addMember('new-employees-group-id', user.id);
+
+  // 4. 设置邮箱设置
+  await orm.users.updateMailboxSettings(user.id, {
+    timeZone: 'China Standard Time',
+    language: { locale: 'zh-CN' }
+  });
+
+  // 5. 发送欢迎邮件
+  await orm.mail.send('admin@contoso.com', {
+    subject: '欢迎加入公司',
+    toRecipients: [
+      {
+        emailAddress: {
+          address: email,
+          name: displayName
+        }
+      }
+    ],
+    body: {
+      contentType: 'HTML',
+      content: '<h1>欢迎！</h1><p>请查看附件中的入职指南。</p>'
+    }
+  });
+
+  console.log('用户入职完成:', user.id);
+  return user;
 }
 ```
 
-## 最佳实践
-
-### 1. 使用 Select 减少数据传输
+### 组织会议
 
 ```typescript
-// ❌ 不好：获取所有字段
-const users = await orm.users.query().get();
+async function scheduleMeeting(
+  organizerId: string,
+  subject: string,
+  attendeeEmails: string[],
+  duration: number
+) {
+  // 1. 查找合适的会议时间
+  const attendees = attendeeEmails.map(email => ({
+    type: 'required',
+    emailAddress: { address: email }
+  }));
 
-// ✅ 好：只获取需要的字段
-const users = await orm.users
-  .query()
-  .select(['id', 'displayName', 'mail'])
-  .get();
-```
+  const suggestions = await orm.calendar.findMeetingTimes(
+    attendees,
+    {
+      timeslots: [
+        {
+          start: {
+            dateTime: '2024-01-15T09:00:00',
+            timeZone: 'China Standard Time'
+          },
+          end: {
+            dateTime: '2024-01-15T18:00:00',
+            timeZone: 'China Standard Time'
+          }
+        }
+      ]
+    },
+    `PT${duration}M`,
+    5
+  );
 
-### 2. 使用分页避免大量数据
+  // 2. 查找可用会议室
+  const rooms = await orm.calendar.findRooms(organizerId);
 
-```typescript
-// ✅ 使用 top 限制结果数量
-const users = await orm.users.query().top(100).get();
-```
+  // 3. 创建事件
+  const event = await orm.calendar.createEvent(organizerId, {
+    subject,
+    start: suggestions[0].meetingTimeSlot.start,
+    end: suggestions[0].meetingTimeSlot.end,
+    location: {
+      displayName: rooms[0]?.displayName || '线上会议'
+    },
+    attendees
+  });
 
-### 3. 使用 Delta Query 跟踪变化
-
-```typescript
-// ✅ 使用 Delta Query 而不是每次全量查询
-const changes = await orm.deltaUsers(savedDeltaLink);
-```
-
-### 4. 使用批处理减少请求次数
-
-```typescript
-// ✅ 批量请求多个资源
-const batch = await orm.batch([/* 多个请求 */]);
-```
-
-### 5. 合理处理国家云差异
-
-```typescript
-// ✅ 对不可用的 API 进行降级处理
-try {
-  const notebooks = await orm.notebooks('user@contoso.com').query().get();
-} catch (error) {
-  if (error.code === GraphErrorCode.RESOURCE_NOT_FOUND) {
-    console.log('OneNote 在当前云环境不可用');
-    // 使用替代方案
-  }
+  console.log('会议已创建:', event.id);
+  return event;
 }
 ```
 
-## 更多资源
+这些示例展示了新版 Graph ORM 的主要功能和最佳实践。更多详细信息，请查看 [完整文档](./DOCS_INDEX.md)。
 
-- [完整 API 参考](./GRAPH_API_REFERENCE.md)
-- [ORM 使用指南](./GRAPH_ORM_GUIDE.md)
-- [API 覆盖率](./API_COVERAGE.md)
-- [Microsoft Graph 官方文档](https://learn.microsoft.com/graph/)

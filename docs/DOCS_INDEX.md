@@ -17,8 +17,7 @@ msgraph-orm-js/
     ├── GRAPH_ORM_GUIDE.md              # ORM 使用教程
     ├── EXAMPLES.md                     # 完整代码示例
     ├── GRAPH_API_REFERENCE.md          # API 参考手册
-    ├── API_COVERAGE.md                 # API 覆盖率报告
-    └── IMPLEMENTATION_SUMMARY.md       # 实施详细总结
+    └── API_COVERAGE.md                 # API 覆盖率报告
 ```
 
 ## 🚀 快速导航
@@ -41,7 +40,6 @@ msgraph-orm-js/
 
 1. [PUBLISHING.md](./PUBLISHING.md) - 发布流程
 2. [CHANGELOG.md](../CHANGELOG.md) - 版本记录
-3. [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) - 技术总结
 
 ## 📖 文档说明
 
@@ -102,14 +100,6 @@ NPM 发布指南
 - 发布流程、版本规范
 - 检查清单、常见问题
 
-### [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)
-
-实施详细总结
-
-- 架构设计、实现细节
-- 技术决策、性能优化
-- 技术栈和构建配置
-
 ### [CHANGELOG.md](../CHANGELOG.md)
 
 版本更新记录 - 由 `standard-version` 自动生成
@@ -126,8 +116,6 @@ NPM 发布指南
 
 **发布版本** → [PUBLISHING.md](./PUBLISHING.md)
 
-**了解实现** → [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)
-
 ## 🎯 按功能模块查找
 
 | 模块 | README | 示例 | API 列表 |
@@ -138,27 +126,6 @@ NPM 发布指南
 | 文件存储 | [链接](../README.md#文件管理) | [链接](./EXAMPLES.md#文件管理) | [链接](./API_COVERAGE.md#文件存储) |
 | Teams | [链接](../README.md#teams-协作) | [链接](./EXAMPLES.md#teams-协作) | [链接](./API_COVERAGE.md#teams) |
 | SharePoint | [链接](../README.md#sharepoint) | [链接](./EXAMPLES.md#sharepoint) | [链接](./API_COVERAGE.md#sharepoint) |
-
-## 💡 学习路径
-
-### **初级开发者（3周计划）**
-
-- 第1天: README.md
-- 第2-3天: EXAMPLES.md（基础）
-- 第1周: EXAMPLES.md（深入）
-- 第2周: GRAPH_ORM_GUIDE.md
-- 第3周: API_COVERAGE.md
-
-### **中级开发者（1天速成）**
-
-- 1小时: README.md
-- 2小时: EXAMPLES.md
-- 1小时: GRAPH_ORM_GUIDE.md
-
-### **高级开发者/架构师**
-
-- 快速浏览: README.md + GRAPH_ORM_GUIDE.md
-- 重点阅读: IMPLEMENTATION_SUMMARY.md + API_COVERAGE.md
 
 ## 🔗 外部资源
 

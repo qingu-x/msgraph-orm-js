@@ -27,6 +27,7 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
   private countOnly = false;
   private expandProperties?: string[];
   private responseFormat?: 'json' | 'atom';
+  private customHeaders: Record<string, string> = {};
   
   // 高级查询操作符（需要 ConsistencyLevel: eventual，不支持排序）
   private readonly advancedOperators: QueryOperator[] = ['startswith', 'endswith', 'contains'];
@@ -222,6 +223,51 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
   }
 
   /**
+   * 设置自定义请求头
+   * 
+   * @param name - 请求头名称
+   * @param value - 请求头值
+   * @returns QueryBuilder 实例（支持链式调用）
+   * @example
+   * ```typescript
+   * // 设置自定义请求头
+   * queryBuilder.header('Prefer', 'outlook.timezone="Pacific Standard Time"')
+   * ```
+   */
+  header(name: string, value: string): QueryBuilder<T> {
+    this.customHeaders[name] = value;
+    return this;
+  }
+
+  /**
+   * 设置时区偏好（用于日历事件查询）
+   * 返回事件的开始和结束时间将使用指定的时区
+   * 
+   * @param timezone - 时区名称（Windows 时区或 IANA 时区）
+   * @returns QueryBuilder 实例（支持链式调用）
+   * @see https://learn.microsoft.com/graph/outlook-calendar-concept-overview
+   * @see https://learn.microsoft.com/graph/api/user-list-events#request-headers
+   * @example
+   * ```typescript
+   * // 使用 Windows 时区名称
+   * const events = await orm.events('user@contoso.com')
+   *   .query()
+   *   .timezone('China Standard Time')
+   *   .get();
+   * 
+   * // 使用 IANA 时区名称
+   * const events = await orm.events('user@contoso.com')
+   *   .query()
+   *   .timezone('Asia/Shanghai')
+   *   .get();
+   * ```
+   */
+  timezone(timezone: string): QueryBuilder<T> {
+    this.customHeaders['Prefer'] = `outlook.timezone="${timezone}"`;
+    return this;
+  }
+
+  /**
    * 构建 OData $filter 查询字符串
    * @see https://learn.microsoft.com/graph/filter-query-parameter
    */
@@ -413,7 +459,7 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
     url: string;
   } {
     const params = this.buildQueryParams();
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...this.customHeaders };
     
     // 检查是否需要添加 ConsistencyLevel: eventual 头部
     const needsEventualConsistency = 

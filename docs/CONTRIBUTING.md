@@ -83,13 +83,13 @@ npm run lint:fix
 ### ES Module (推荐)
 
 ```typescript
-import { createGraphORM, ClientCredentialsAuthProvider } from '@qingu-x/msgraph-orm-js';
+import { createGraphORM } from '@qingu-x/msgraph-orm-js';
 ```
 
 ### CommonJS
 
 ```javascript
-const { createGraphORM, ClientCredentialsAuthProvider } = require('@qingu-x/msgraph-orm-js');
+const { createGraphORM } = require('@qingu-x/msgraph-orm-js');
 ```
 
 ### UMD (浏览器)

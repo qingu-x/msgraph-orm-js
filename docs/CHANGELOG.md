@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.9](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.8...v0.0.9) (2025-10-12)
+
+
+### ✨ Features
+
+* **orm:** add getRaw for debug ([1dce020](https://github.com/qingu-x/msgraph-orm-js/commit/1dce020e9ebf35204e71a48cd19de7cf13b27423))
+
 ### [0.0.8](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.7...v0.0.8) (2025-10-11)
 
 
