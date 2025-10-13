@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.1.1](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.0...v0.1.1) (2025-10-13)
+
+### ✨ Features
+
+* **repositories:** 添加 EventRepository, MessageRepository, DriveItemRepository
+* **repositories:** 支持使用查询构建器查询事件、邮件和文件
+* **services:** 简化 Service 类，专注于业务逻辑功能
+* **services:** 添加 delta 增量查询方法到 Mail, Calendar, File 服务
+* **types:** 添加 Permission 接口定义
+
+### 📝 Documentation
+
+* **readme:** 更新示例展示 Repository 和 Service 的使用场景
+* **examples:** 添加架构说明部分，解释 Repository vs Service 的选择原则
+* **readme:** 更新 GraphClient 使用方式
+
+### 💡 改进
+
+* **architecture:** 实现真正的 Repository + Service 混合模式
+  - Repository 负责实体 CRUD，支持查询构建器
+  - Service 负责业务逻辑和特殊 API
+* **query:** 邮件、事件、文件现在支持复杂查询条件
+* **user-repository:** 移除冗余的 calendarEvents 方法
+
 ## [0.1.0](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.9...v0.1.0) (2025-10-13)
 
 
