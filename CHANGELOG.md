@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.11](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.10...v0.1.11) (2025-10-13)
+
+
+### ✨ Features
+
+* **repository:** getRaw for curd ([61d286b](https://github.com/qingu-x/msgraph-orm-js/commit/61d286bfa3edbe1bc0d9f7ce5cc21fba4d356152))
+
 ### [0.1.10](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.9...v0.1.10) (2025-10-13)
 
 
