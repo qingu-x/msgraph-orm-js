@@ -45,20 +45,10 @@ Microsoft Graph 的 ORM 封装，提供简洁、类型安全、符合 ORM 规范
          └──────────────────┘
 ```
 
-### 对比旧版本
-
-| 特性 | 旧版本 | 新版本 |
-|------|--------|--------|
-| GraphORM 方法数 | 185+ | ~30 |
-| 架构设计 | 混乱，职责不清 | 清晰的仓储+服务 |
-| API 一致性 | 混合多种风格 | 统一的访问模式 |
-| 关系访问 | 手动拼接路径 | 类型安全的关系方法 |
-| 代码维护性 | 低 | 高 |
-
 ## 📦 安装
 
 ```bash
-npm install @qingu-x/msgraph-orm-js @microsoft/microsoft-graph-client
+npm install @qingu-x/msgraph-orm-js
 ```
 
 ## 🚀 快速开始
