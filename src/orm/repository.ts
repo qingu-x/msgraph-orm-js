@@ -1,5 +1,5 @@
 import { Client } from '@microsoft/microsoft-graph-client';
-import { GraphEntity, EntityManager, GraphCollection, CrudRawRequest } from './types';
+import { GraphEntity, EntityManager, GraphCollection } from './types';
 import { GraphQueryBuilder } from './query-builder';
 import { GraphOrmError } from './errors';
 
@@ -19,11 +19,7 @@ export abstract class GraphRepository<T extends GraphEntity> implements EntityMa
    * 通过 ID 查找实体
    */
   async findById(id: string): Promise<T> {
-    try {
-      return await this.client.api(`${this.endpoint}/${encodeURIComponent(id)}`).get();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().findById(id);
   }
 
   /**
@@ -79,33 +75,21 @@ export abstract class GraphRepository<T extends GraphEntity> implements EntityMa
    * 创建实体
    */
   async create(entity: Omit<T, 'id'>): Promise<T> {
-    try {
-      return await this.client.api(this.endpoint).post(entity);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().create(entity);
   }
 
   /**
    * 更新实体
    */
   async update(id: string, entity: Partial<T>): Promise<T> {
-    try {
-      return await this.client.api(`${this.endpoint}/${encodeURIComponent(id)}`).patch(entity);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().update(id, entity);
   }
 
   /**
    * 删除实体
    */
   async delete(id: string): Promise<void> {
-    try {
-      await this.client.api(`${this.endpoint}/${encodeURIComponent(id)}`).delete();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().delete(id);
   }
 
   /**
@@ -167,122 +151,6 @@ export abstract class GraphRepository<T extends GraphEntity> implements EntityMa
   ): GraphRepository<R> {
     const subEndpoint = `${this.endpoint}/${encodeURIComponent(id)}/${navigationProperty}`;
     return new GenericRepository<R>(this.client, subEndpoint);
-  }
-
-  /**
-   * 获取 findById 操作的原始请求信息（用于调试）
-   * 不执行实际请求，仅返回请求详情
-   * 
-   * @param id - 实体 ID
-   * @returns 包含请求方法、端点、URL 等信息的对象
-   * @example
-   * ```typescript
-   * const raw = repository.getRawFindById('user-id-123');
-   * console.log(raw);
-   * // {
-   * //   method: 'GET',
-   * //   endpoint: '/users',
-   * //   url: '/users/user-id-123'
-   * // }
-   * ```
-   */
-  getRawFindById(id: string): CrudRawRequest {
-    const url = `${this.endpoint}/${encodeURIComponent(id)}`;
-    return {
-      method: 'GET',
-      endpoint: this.endpoint,
-      url,
-    };
-  }
-
-  /**
-   * 获取 create 操作的原始请求信息（用于调试）
-   * 不执行实际请求，仅返回请求详情
-   * 
-   * @param entity - 要创建的实体数据
-   * @returns 包含请求方法、端点、URL、请求体等信息的对象
-   * @example
-   * ```typescript
-   * const raw = repository.getRawCreate({ displayName: 'John Doe', mail: 'john@example.com' });
-   * console.log(raw);
-   * // {
-   * //   method: 'POST',
-   * //   endpoint: '/users',
-   * //   url: '/users',
-   * //   body: { displayName: 'John Doe', mail: 'john@example.com' },
-   * //   headers: { 'Content-Type': 'application/json' }
-   * // }
-   * ```
-   */
-  getRawCreate(entity: Omit<T, 'id'>): CrudRawRequest {
-    return {
-      method: 'POST',
-      endpoint: this.endpoint,
-      url: this.endpoint,
-      body: entity,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-  }
-
-  /**
-   * 获取 update 操作的原始请求信息（用于调试）
-   * 不执行实际请求，仅返回请求详情
-   * 
-   * @param id - 实体 ID
-   * @param entity - 要更新的实体数据（部分字段）
-   * @returns 包含请求方法、端点、URL、请求体等信息的对象
-   * @example
-   * ```typescript
-   * const raw = repository.getRawUpdate('user-id-123', { displayName: 'Jane Doe' });
-   * console.log(raw);
-   * // {
-   * //   method: 'PATCH',
-   * //   endpoint: '/users',
-   * //   url: '/users/user-id-123',
-   * //   body: { displayName: 'Jane Doe' },
-   * //   headers: { 'Content-Type': 'application/json' }
-   * // }
-   * ```
-   */
-  getRawUpdate(id: string, entity: Partial<T>): CrudRawRequest {
-    const url = `${this.endpoint}/${encodeURIComponent(id)}`;
-    return {
-      method: 'PATCH',
-      endpoint: this.endpoint,
-      url,
-      body: entity,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-  }
-
-  /**
-   * 获取 delete 操作的原始请求信息（用于调试）
-   * 不执行实际请求，仅返回请求详情
-   * 
-   * @param id - 实体 ID
-   * @returns 包含请求方法、端点、URL 等信息的对象
-   * @example
-   * ```typescript
-   * const raw = repository.getRawDelete('user-id-123');
-   * console.log(raw);
-   * // {
-   * //   method: 'DELETE',
-   * //   endpoint: '/users',
-   * //   url: '/users/user-id-123'
-   * // }
-   * ```
-   */
-  getRawDelete(id: string): CrudRawRequest {
-    const url = `${this.endpoint}/${encodeURIComponent(id)}`;
-    return {
-      method: 'DELETE',
-      endpoint: this.endpoint,
-      url,
-    };
   }
 }
 

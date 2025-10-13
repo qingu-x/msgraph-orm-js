@@ -1,5 +1,5 @@
 import { Client } from '@microsoft/microsoft-graph-client';
-import { GraphEntity, EntityManager, GraphCollection, CrudRawRequest } from './types';
+import { GraphEntity, EntityManager, GraphCollection } from './types';
 import { GraphQueryBuilder } from './query-builder';
 import { GraphOrmError } from './errors';
 
@@ -10,11 +10,7 @@ export class GraphEntityManager<T extends GraphEntity> implements EntityManager<
   ) {}
 
   async findById(id: string): Promise<T> {
-    try {
-      return await this.client.api(`${this.endpoint}/${encodeURIComponent(id)}`).get();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().findById(id);
   }
 
   async findOne(query: Partial<T>): Promise<T | null> {
@@ -56,27 +52,15 @@ export class GraphEntityManager<T extends GraphEntity> implements EntityManager<
   }
 
   async create(entity: Omit<T, 'id'>): Promise<T> {
-    try {
-      return await this.client.api(this.endpoint).post(entity);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().create(entity);
   }
 
   async update(id: string, entity: Partial<T>): Promise<T> {
-    try {
-      return await this.client.api(`${this.endpoint}/${encodeURIComponent(id)}`).patch(entity);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().update(id, entity);
   }
 
   async delete(id: string): Promise<void> {
-    try {
-      await this.client.api(`${this.endpoint}/${encodeURIComponent(id)}`).delete();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().delete(id);
   }
 
   query(): GraphQueryBuilder<T> {
@@ -97,64 +81,5 @@ export class GraphEntityManager<T extends GraphEntity> implements EntityManager<
     }
     
     return conditions;
-  }
-
-  /**
-   * 获取 findById 操作的原始请求信息（用于调试）
-   * 不执行实际请求，仅返回请求详情
-   */
-  getRawFindById(id: string): CrudRawRequest {
-    const url = `${this.endpoint}/${encodeURIComponent(id)}`;
-    return {
-      method: 'GET',
-      endpoint: this.endpoint,
-      url,
-    };
-  }
-
-  /**
-   * 获取 create 操作的原始请求信息（用于调试）
-   * 不执行实际请求，仅返回请求详情
-   */
-  getRawCreate(entity: Omit<T, 'id'>): CrudRawRequest {
-    return {
-      method: 'POST',
-      endpoint: this.endpoint,
-      url: this.endpoint,
-      body: entity,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-  }
-
-  /**
-   * 获取 update 操作的原始请求信息（用于调试）
-   * 不执行实际请求，仅返回请求详情
-   */
-  getRawUpdate(id: string, entity: Partial<T>): CrudRawRequest {
-    const url = `${this.endpoint}/${encodeURIComponent(id)}`;
-    return {
-      method: 'PATCH',
-      endpoint: this.endpoint,
-      url,
-      body: entity,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-  }
-
-  /**
-   * 获取 delete 操作的原始请求信息（用于调试）
-   * 不执行实际请求，仅返回请求详情
-   */
-  getRawDelete(id: string): CrudRawRequest {
-    const url = `${this.endpoint}/${encodeURIComponent(id)}`;
-    return {
-      method: 'DELETE',
-      endpoint: this.endpoint,
-      url,
-    };
   }
 }

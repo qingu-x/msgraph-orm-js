@@ -44,25 +44,28 @@ export interface QueryBuilder<T> {
   expand(property: string | string[]): QueryBuilder<T>;
   format(format: 'json' | 'atom'): QueryBuilder<T>;
   count(): QueryBuilder<T>;
-  getRaw(): {
-    endpoint: string;
-    params: Record<string, string | number>;
-    headers: Record<string, string>;
-    url: string;
-  };
+  header(name: string, value: string): QueryBuilder<T>;
+  timezone(timezone: string): QueryBuilder<T>;
+  getDebug(): RequestDebugInfo;
   get(): Promise<GraphCollection<T>>;
   first(): Promise<T>;
   pagination(): AsyncIterableIterator<T>;
+  // CRUD 操作
+  findById(id: string): Promise<T>;
+  create(entity: Omit<T, 'id'>): Promise<T>;
+  update(id: string, entity: Partial<T>): Promise<T>;
+  delete(id: string): Promise<void>;
 }
 
-// CRUD 操作的原始请求信息
-export interface CrudRawRequest {
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+// 请求调试信息
+export interface RequestDebugInfo {
+  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   endpoint: string;
   url: string;
   headers?: Record<string, string>;
   body?: Record<string, unknown>;
   params?: Record<string, string | number>;
+  response?: unknown;
 }
 
 // 实体管理器接口
@@ -74,12 +77,6 @@ export interface EntityManager<T extends GraphEntity> {
   update(id: string, entity: Partial<T>): Promise<T>;
   delete(id: string): Promise<void>;
   query(): QueryBuilder<T>;
-  
-  // 调试方法：返回原始请求信息而不执行
-  getRawFindById(id: string): CrudRawRequest;
-  getRawCreate(entity: Omit<T, 'id'>): CrudRawRequest;
-  getRawUpdate(id: string, entity: Partial<T>): CrudRawRequest;
-  getRawDelete(id: string): CrudRawRequest;
 }
 
 // 用户实体

@@ -1,5 +1,5 @@
 import { Client } from '@microsoft/microsoft-graph-client';
-import { GraphEntity, GraphCollection, QueryBuilder, QueryCondition, OrderDirection, QueryOperator } from './types';
+import { GraphEntity, GraphCollection, QueryBuilder, QueryCondition, OrderDirection, QueryOperator, RequestDebugInfo } from './types';
 import { GraphOrmError, GraphErrorCode } from './errors';
 
 /**
@@ -436,15 +436,16 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
   }
 
   /**
-   * 获取 ORM 生成的完整请求信息
-   * 包括端点、查询参数和请求头
+   * 获取查询的调试信息
+   * 包括请求方法、端点、查询参数和请求头
    * 
-   * @returns 包含端点、参数和头信息的完整请求对象
+   * @returns 包含完整请求信息的调试对象
    * @example
    * ```typescript
-   * const raw = queryBuilder.getRaw();
-   * console.log(raw);
+   * const debug = queryBuilder.getDebug();
+   * console.log(debug);
    * // {
+   * //   method: 'GET',
    * //   endpoint: '/users',
    * //   params: { $filter: "displayName eq 'John'", $top: 10 },
    * //   headers: { ConsistencyLevel: 'eventual' },
@@ -452,12 +453,7 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
    * // }
    * ```
    */
-  public getRaw(): {
-    endpoint: string;
-    params: Record<string, string | number>;
-    headers: Record<string, string>;
-    url: string;
-  } {
+  public getDebug(): RequestDebugInfo {
     const params = this.buildQueryParams();
     const headers: Record<string, string> = { ...this.customHeaders };
     
@@ -482,6 +478,7 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
     }
     
     return {
+      method: 'GET',
       endpoint: this.endpoint,
       params,
       headers,
@@ -686,4 +683,86 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
       }
     } while (nextLink);
   }
+
+  /**
+   * 通过 ID 查找单个实体
+   * 
+   * @param id - 实体 ID
+   * @returns 实体对象
+   * @throws GraphOrmError 查询失败时抛出
+   * @example
+   * ```typescript
+   * const user = await queryBuilder.findById('user-id-123');
+   * ```
+   */
+  async findById(id: string): Promise<T> {
+    try {
+      return await this.client.api(`${this.endpoint}/${encodeURIComponent(id)}`).get();
+    } catch (error) {
+      throw GraphOrmError.fromGraphError(error);
+    }
+  }
+
+  /**
+   * 创建新实体
+   * 
+   * @param entity - 要创建的实体数据（不含 id）
+   * @returns 创建后的实体对象（包含服务器生成的 id）
+   * @throws GraphOrmError 创建失败时抛出
+   * @example
+   * ```typescript
+   * const newUser = await queryBuilder.create({
+   *   displayName: 'John Doe',
+   *   userPrincipalName: 'john@contoso.com'
+   * });
+   * ```
+   */
+  async create(entity: Omit<T, 'id'>): Promise<T> {
+    try {
+      return await this.client.api(this.endpoint).post(entity);
+    } catch (error) {
+      throw GraphOrmError.fromGraphError(error);
+    }
+  }
+
+  /**
+   * 更新实体
+   * 
+   * @param id - 实体 ID
+   * @param entity - 要更新的字段（部分更新）
+   * @returns 更新后的实体对象
+   * @throws GraphOrmError 更新失败时抛出
+   * @example
+   * ```typescript
+   * const updatedUser = await queryBuilder.update('user-id-123', {
+   *   displayName: 'Jane Doe'
+   * });
+   * ```
+   */
+  async update(id: string, entity: Partial<T>): Promise<T> {
+    try {
+      return await this.client.api(`${this.endpoint}/${encodeURIComponent(id)}`).patch(entity);
+    } catch (error) {
+      throw GraphOrmError.fromGraphError(error);
+    }
+  }
+
+  /**
+   * 删除实体
+   * 
+   * @param id - 实体 ID
+   * @throws GraphOrmError 删除失败时抛出
+   * @example
+   * ```typescript
+   * await queryBuilder.delete('user-id-123');
+   * ```
+   */
+  async delete(id: string): Promise<void> {
+    try {
+      await this.client.api(`${this.endpoint}/${encodeURIComponent(id)}`).delete();
+    } catch (error) {
+      throw GraphOrmError.fromGraphError(error);
+    }
+  }
+
 }
