@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.1](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.0...v0.1.1) (2025-10-13)
+
+
+### ✨ Features
+
+* **repository:** add event/message/devieItem Repository ([a4cf4ff](https://github.com/qingu-x/msgraph-orm-js/commit/a4cf4ff070fe8b91069b87c367f4c9a5f9d00ea8))
+
 ## [0.1.0](https://github.com/qingu-x/msgraph-orm-js/compare/v0.0.9...v0.1.0) (2025-10-13)
 
 
