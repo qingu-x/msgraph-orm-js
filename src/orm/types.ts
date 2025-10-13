@@ -55,6 +55,16 @@ export interface QueryBuilder<T> {
   pagination(): AsyncIterableIterator<T>;
 }
 
+// CRUD 操作的原始请求信息
+export interface CrudRawRequest {
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  endpoint: string;
+  url: string;
+  headers?: Record<string, string>;
+  body?: Record<string, unknown>;
+  params?: Record<string, string | number>;
+}
+
 // 实体管理器接口
 export interface EntityManager<T extends GraphEntity> {
   findById(id: string): Promise<T>;
@@ -64,6 +74,12 @@ export interface EntityManager<T extends GraphEntity> {
   update(id: string, entity: Partial<T>): Promise<T>;
   delete(id: string): Promise<void>;
   query(): QueryBuilder<T>;
+  
+  // 调试方法：返回原始请求信息而不执行
+  getRawFindById(id: string): CrudRawRequest;
+  getRawCreate(entity: Omit<T, 'id'>): CrudRawRequest;
+  getRawUpdate(id: string, entity: Partial<T>): CrudRawRequest;
+  getRawDelete(id: string): CrudRawRequest;
 }
 
 // 用户实体
