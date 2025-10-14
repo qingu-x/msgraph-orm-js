@@ -2,6 +2,7 @@ import { Client } from '@microsoft/microsoft-graph-client';
 import { GraphRepository } from '../repository';
 import { Group, User, Team, Drive, Event } from '../types';
 import { GraphOrmError } from '../errors';
+import { GraphQueryBuilder } from '../query-builder';
 
 /**
  * 组仓储
@@ -158,7 +159,8 @@ export class GroupRepository extends GraphRepository<Group> {
    * 使用 query-builder 支持调试和自定义 header
    */
   async getPhotoMetadata(groupId: string): Promise<{ width: number; height: number; id: string } | null> {
-    return await this.query<{ width: number; height: number; id: string }>(`${encodeURIComponent(groupId)}/photo`).first();
+    const queryBuilder = new GraphQueryBuilder<{ width: number; height: number; id: string }>(this.client, `${this.endpoint}/${encodeURIComponent(groupId)}/photo`);
+    return await queryBuilder.first();
   }
 
   /**
@@ -167,7 +169,8 @@ export class GroupRepository extends GraphRepository<Group> {
    * 使用 query-builder 支持调试和自定义 header
    */
   async getPhotoContent(groupId: string): Promise<Blob | null> {
-    return await this.query<Blob>(`${encodeURIComponent(groupId)}/photo/$value`).first();
+    const queryBuilder = new GraphQueryBuilder<Blob>(this.client, `${this.endpoint}/${encodeURIComponent(groupId)}/photo/$value`);
+    return await queryBuilder.first();
   }
 }
 

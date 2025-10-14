@@ -1,5 +1,5 @@
 import { Client } from '@microsoft/microsoft-graph-client';
-import { Event, Calendar, CalendarGroup, Room, GraphCollection } from '../types';
+import { Event, Calendar, CalendarGroup, Room, GraphCollection, RequestDebugInfo } from '../types';
 import { GraphOrmError, GraphErrorCode } from '../errors';
 import { GraphQueryBuilder } from '../query-builder';
 
@@ -16,13 +16,29 @@ import { GraphQueryBuilder } from '../query-builder';
  * @see https://learn.microsoft.com/graph/api/resources/event
  */
 export class CalendarService {
-  constructor(private client: Client) {}
+  protected lastQueryBuilder?: GraphQueryBuilder<unknown>;
+  constructor(private client: Client) {
+    this.lastQueryBuilder = undefined;
+  }
 
   /**
    * 创建 query-builder 实例（私有辅助方法）
    */
   private query<T>(endpoint: string): GraphQueryBuilder<T> {
-    return new GraphQueryBuilder<T>(this.client, endpoint);
+    this.lastQueryBuilder = new GraphQueryBuilder<T>(this.client, endpoint) as GraphQueryBuilder<unknown>;
+    return this.lastQueryBuilder as GraphQueryBuilder<T>;
+  }
+
+  getDebug(): RequestDebugInfo {
+    const debugInfo = this.lastQueryBuilder?.getDebug();
+    if (!debugInfo) {
+      throw new GraphOrmError({
+        code: GraphErrorCode.RESOURCE_NOT_FOUND,
+        message: '调试信息未找到',
+        timestamp: new Date()
+      });
+    }
+    return debugInfo;
   }
 
   /**

@@ -1,5 +1,6 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import { GraphRepository } from '../repository';
+import { GraphQueryBuilder } from '../query-builder';
 import { User, Group, Drive, LicenseDetails, MailboxSettings, GraphCollection } from '../types';
 import { GraphOrmError } from '../errors';
 import { MessageRepository } from './message.repository';
@@ -140,7 +141,8 @@ export class UserRepository extends GraphRepository<User> {
    * 使用 query-builder 支持调试和自定义 header
    */
   async getLicenses(userId: string): Promise<GraphCollection<LicenseDetails>> {
-    return await this.query<LicenseDetails>(`${encodeURIComponent(userId)}/licenseDetails`).get();
+    const queryBuilder = new GraphQueryBuilder<LicenseDetails>(this.client, `${this.endpoint}/${encodeURIComponent(userId)}/licenseDetails`);
+    return await queryBuilder.get();
   }
 
   /**
@@ -167,7 +169,8 @@ export class UserRepository extends GraphRepository<User> {
    * 使用 query-builder 支持调试和自定义 header
    */
   async getMailboxSettings(userId: string): Promise<MailboxSettings | null> {
-    return this.query<MailboxSettings>(`${encodeURIComponent(userId)}/mailboxSettings`).first();
+    const queryBuilder = new GraphQueryBuilder<Omit<MailboxSettings, 'workingHours'>>(this.client, `${this.endpoint}/${encodeURIComponent(userId)}/mailboxSettings`);
+    return await queryBuilder.first();
   }
 
   /**
@@ -176,8 +179,9 @@ export class UserRepository extends GraphRepository<User> {
    * 权限要求：MailboxSettings.ReadWrite
    * 使用 query-builder 支持调试和自定义 header
    */
-  async updateMailboxSettings(userId: string, settings: Partial<MailboxSettings>): Promise<MailboxSettings> {
-    return this.query<MailboxSettings>(`${encodeURIComponent(userId)}/mailboxSettings`).update(null, settings);
+  async updateMailboxSettings(userId: string, settings: Partial<Omit<MailboxSettings, 'workingHours'>>): Promise<MailboxSettings> { 
+    const queryBuilder = new GraphQueryBuilder<Omit<MailboxSettings, 'workingHours'>>(this.client, `${this.endpoint}/${encodeURIComponent(userId)}/mailboxSettings`);
+    return await queryBuilder.update(null, settings);
   }
 
   /**
@@ -202,7 +206,8 @@ export class UserRepository extends GraphRepository<User> {
    * 使用 query-builder 支持调试和自定义 header
    */
   async getPhotoMetadata(userId: string): Promise<{ width: number; height: number; id: string } | null> {
-    return this.query<{ width: number; height: number; id: string }>(`${encodeURIComponent(userId)}/photo`).first();
+    const queryBuilder = new GraphQueryBuilder<{ width: number; height: number; id: string }>(this.client, `${this.endpoint}/${encodeURIComponent(userId)}/photo`);
+    return await queryBuilder.first();
   }
 
   /**
@@ -211,7 +216,8 @@ export class UserRepository extends GraphRepository<User> {
    * 使用 query-builder 支持调试和自定义 header
    */
   async getPhotoContent(userId: string): Promise<Blob | null> {
-    return this.query<Blob>(`${encodeURIComponent(userId)}/photo/$value`).first();
+    const queryBuilder = new GraphQueryBuilder<Blob>(this.client, `${this.endpoint}/${encodeURIComponent(userId)}/photo/$value`);
+    return await queryBuilder.first();
   }
 }
 

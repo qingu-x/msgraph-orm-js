@@ -1,7 +1,7 @@
 import { Client } from '@microsoft/microsoft-graph-client';
-import { GraphEntity, EntityManager, GraphCollection } from './types';
+import { GraphEntity, EntityManager, GraphCollection, RequestDebugInfo } from './types';
 import { GraphQueryBuilder } from './query-builder';
-import { GraphOrmError } from './errors';
+import { GraphErrorCode, GraphOrmError } from './errors';
 
 /**
  * Graph 仓储基类
@@ -10,10 +10,13 @@ import { GraphOrmError } from './errors';
  * 所有资源仓储都应继承此类
  */
 export abstract class GraphRepository<T extends GraphEntity> implements EntityManager<T> {
+  protected lastQueryBuilder?: GraphQueryBuilder<T>;
   constructor(
     protected client: Client,
-    protected endpoint: string
-  ) {}
+    protected endpoint: string,
+  ) {
+    this.lastQueryBuilder = undefined;
+  }
 
   /**
    * 通过 ID 查找实体
@@ -118,8 +121,24 @@ export abstract class GraphRepository<T extends GraphEntity> implements EntityMa
   /**
    * 创建查询构建器
    */
-  query<R = T>(url: string = ''): GraphQueryBuilder<R> {
-    return new GraphQueryBuilder<R>(this.client, this.endpoint + url);
+  query(url: string = ''): GraphQueryBuilder<T> {
+    this.lastQueryBuilder = new GraphQueryBuilder<T>(this.client, this.endpoint + url);
+    return this.lastQueryBuilder;
+  }
+
+  /**
+   * 获取调试信息
+   */
+  getDebug(): RequestDebugInfo {
+    const debugInfo = this.query().getDebug();
+    if (!debugInfo) {
+      throw new GraphOrmError({
+        code: GraphErrorCode.RESOURCE_NOT_FOUND,
+        message: '调试信息未找到',
+        timestamp: new Date()
+      });
+    }
+    return debugInfo;
   }
 
   /**

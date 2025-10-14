@@ -79,6 +79,7 @@ export interface EntityManager<T extends GraphEntity> {
   update(id: string, entity: Partial<T>): Promise<T>;
   delete(id: string): Promise<void>;
   query(): QueryBuilder<T>;
+  getDebug(): RequestDebugInfo;
 }
 
 // 用户实体

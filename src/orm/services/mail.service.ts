@@ -1,6 +1,7 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import { Message, MailFolder, RequestDebugInfo, GraphCollection } from '../types';
 import { GraphQueryBuilder } from '../query-builder';
+import { GraphErrorCode, GraphOrmError } from '../errors';
 
 /**
  * 邮件服务
@@ -14,15 +15,28 @@ import { GraphQueryBuilder } from '../query-builder';
  * @see https://learn.microsoft.com/graph/api/resources/message
  */
 export class MailService {
-  private lastDebugInfo?: RequestDebugInfo;
+  private lastQueryBuilder?: GraphQueryBuilder<unknown>;
 
   constructor(private client: Client) {}
 
   /**
    * 创建 query-builder 实例（私有辅助方法）
    */
-  private query<T>(endpoint: string) {
-    return new GraphQueryBuilder<T>(this.client, endpoint);
+  private query<T>(endpoint: string): GraphQueryBuilder<T> {
+    this.lastQueryBuilder = new GraphQueryBuilder<T>(this.client, endpoint) as GraphQueryBuilder<unknown>;
+    return this.lastQueryBuilder as GraphQueryBuilder<T>;
+  }
+
+  getDebug(): RequestDebugInfo {
+    const debugInfo = this.lastQueryBuilder?.getDebug();
+    if (!debugInfo) {
+      throw new GraphOrmError({
+        code: GraphErrorCode.RESOURCE_NOT_FOUND,
+        message: '调试信息未找到',
+        timestamp: new Date()
+      });
+    }
+    return debugInfo;
   }
 
   /**

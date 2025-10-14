@@ -1,6 +1,7 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import { GraphRepository } from '../repository';
 import { Message, Attachment, FileAttachment, GraphCollection } from '../types';
+import { GraphQueryBuilder } from '../query-builder';
 
 /**
  * 邮件仓储
@@ -102,7 +103,8 @@ export class MessageRepository extends GraphRepository<Message> {
    * 使用 query-builder 支持调试和自定义 header
    */
   async getAttachments(messageId: string): Promise<GraphCollection<Attachment>> {
-    return await this.query<Attachment>(`${encodeURIComponent(messageId)}/attachments`).get();
+    const queryBuilder = new GraphQueryBuilder<Attachment>(this.client, `${this.endpoint}/${encodeURIComponent(messageId)}/attachments`);
+    return await queryBuilder.get();
   }
 
   /**
