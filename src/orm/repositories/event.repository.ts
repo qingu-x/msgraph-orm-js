@@ -58,7 +58,10 @@ export class EventRepository extends GraphRepository<Event> {
    */
   async create(entity: Omit<Event, 'id'>): Promise<Event> {
     const eventWithTimeZone = this.applyTimeZone(entity as Partial<Event>);
-    return super.create(eventWithTimeZone as Omit<Event, 'id'>);
+    super.setHeaders({'Prefer': 'outlook.timezone="' + this.defaultTimeZone + '"'})
+    const result = super.create(eventWithTimeZone as Omit<Event, 'id'>);
+    super.setHeaders({});
+    return result;
   }
 
   /**
@@ -66,7 +69,10 @@ export class EventRepository extends GraphRepository<Event> {
    */
   async update(id: string, entity: Partial<Event>): Promise<Event> {
     const eventWithTimeZone = this.applyTimeZone(entity);
-    return super.update(id, eventWithTimeZone);
+    super.setHeaders({'Prefer': 'outlook.timezone="' + this.defaultTimeZone + '"'})
+    const result = super.update(id, eventWithTimeZone);
+    super.setHeaders({});
+    return result;
   }
 
   /**

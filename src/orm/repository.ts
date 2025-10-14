@@ -11,13 +11,19 @@ import { GraphErrorCode, GraphOrmError } from './errors';
  */
 export abstract class GraphRepository<T extends GraphEntity> implements EntityManager<T> {
   protected lastQueryBuilder?: GraphQueryBuilder<T>;
+  protected headers?: Record<string, string>;
   constructor(
     protected client: Client,
     protected endpoint: string,
   ) {
     this.lastQueryBuilder = undefined;
+    this.headers = {};
   }
 
+  setHeaders(headers: Record<string, string>) {
+    this.headers = headers;
+    return this;
+  }
   /**
    * 通过 ID 查找实体
    */
@@ -123,7 +129,7 @@ export abstract class GraphRepository<T extends GraphEntity> implements EntityMa
    */
   query(url: string = ''): GraphQueryBuilder<T> {
     this.lastQueryBuilder = new GraphQueryBuilder<T>(this.client, this.endpoint + url);
-    return this.lastQueryBuilder;
+    return this.lastQueryBuilder.setHeaders(this.headers || {});
   }
 
   /**

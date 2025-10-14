@@ -45,7 +45,8 @@ export interface QueryBuilder<T = unknown> {
   expand(property: string | string[]): QueryBuilder<T>;
   format(format: 'json' | 'atom'): QueryBuilder<T>;
   count(): QueryBuilder<T>;
-  header(name: string, value: string): QueryBuilder<T>;
+  addHeader(name: string, value: string): QueryBuilder<T>;
+  setHeaders(headers: Record<string, string>): QueryBuilder<T>;
   getDebug(): RequestDebugInfo | undefined;
   get(): Promise<GraphCollection<T>>;
   first(): Promise<T | null>;

@@ -203,8 +203,13 @@ export class GraphQueryBuilder<T = unknown> implements QueryBuilder<T> {
    * queryBuilder.header('Prefer', 'outlook.timezone="Pacific Standard Time"')
    * ```
    */
-  header(name: string, value: string): QueryBuilder<T> {
+  addHeader(name: string, value: string): QueryBuilder<T> {
     this.customHeaders[name] = value;
+    return this;
+  }
+
+  setHeaders(headers: Record<string, string>) {
+    this.customHeaders = headers;
     return this;
   }
 
