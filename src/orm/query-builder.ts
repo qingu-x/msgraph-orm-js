@@ -513,11 +513,10 @@ export class GraphQueryBuilder<T = unknown> implements QueryBuilder<T> {
    */
   async first(): Promise<T | null> {
     this.top(1);
-    const request = this.buildRequest();
-    this.debugInfo!.method = 'GET';
-    const response = await request.get();
-    this.debugInfo!.response = response;
-    return response.data.length === 1 ? response.data[0] : null;
+    const response = await this.get();
+    const result =  response.data?.length === 1 ? response.data[0] : null;
+    this.debugInfo!.response = result;
+    return result;
   }
 
   /**

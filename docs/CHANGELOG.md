@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.18](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.17...v0.1.18) (2025-10-14)
+
+
+### 🐛 Bug Fixes
+
+* **query-builder:** remove debugInfo by findById ([033b8de](https://github.com/qingu-x/msgraph-orm-js/commit/033b8dec53ec7be35316fb2209973b90381623de))
+
 ### [0.1.17](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.16...v0.1.17) (2025-10-14)
 
 
