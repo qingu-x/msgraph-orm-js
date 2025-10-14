@@ -136,7 +136,7 @@ export abstract class GraphRepository<T extends GraphEntity> implements EntityMa
    * 获取调试信息
    */
   getDebug(): RequestDebugInfo {
-    const debugInfo = this.query().getDebug();
+    const debugInfo = this.lastQueryBuilder?.getDebug();
     if (!debugInfo) {
       throw new GraphOrmError({
         code: GraphErrorCode.RESOURCE_NOT_FOUND,
