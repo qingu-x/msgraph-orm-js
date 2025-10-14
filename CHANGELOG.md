@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.13](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.12...v0.1.13) (2025-10-14)
+
+
+### ♻️ Code Refactoring
+
+* **api:** change api to query-builder ([5b098ea](https://github.com/qingu-x/msgraph-orm-js/commit/5b098ea5eb8841d28c3b14a43da25446d933d505))
+
 ### [0.1.12](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.11...v0.1.12) (2025-10-13)
 
 
