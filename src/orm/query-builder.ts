@@ -1,5 +1,5 @@
-import { Client } from '@microsoft/microsoft-graph-client';
-import { GraphEntity, GraphCollection, QueryBuilder, QueryCondition, OrderDirection, QueryOperator, RequestDebugInfo } from './types';
+import { Client, GraphRequest } from '@microsoft/microsoft-graph-client';
+import { GraphCollection, QueryBuilder, QueryCondition, OrderDirection, QueryOperator, RequestDebugInfo } from './types';
 import { GraphOrmError, GraphErrorCode } from './errors';
 
 /**
@@ -15,7 +15,7 @@ import { GraphOrmError, GraphErrorCode } from './errors';
  * @see https://learn.microsoft.com/graph/query-parameters
  * @see https://learn.microsoft.com/graph/aad-advanced-queries
  */
-export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T> {
+export class GraphQueryBuilder<T = unknown> implements QueryBuilder<T> {
   private conditions: QueryCondition[] = [];
   private orderByField?: string;
   private orderDirection: OrderDirection = 'asc';
@@ -29,6 +29,8 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
   private responseFormat?: 'json' | 'atom';
   private customHeaders: Record<string, string> = {};
   
+  private debugInfo?: RequestDebugInfo;
+
   // 高级查询操作符（需要 ConsistencyLevel: eventual，不支持排序）
   private readonly advancedOperators: QueryOperator[] = ['startswith', 'endswith', 'contains'];
   
@@ -62,13 +64,11 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
     return !this.isUserResource() && !this.isDeviceResource();
   }
 
-  where(field: string, operator: QueryOperator | string | number | boolean | null, value?: string | number | boolean | null): QueryBuilder<T> {
-    // 如果 value 未提供，说明省略了 operator，此时 operator 实际上是 value
+  private generateCondition(field: string, operator: QueryOperator | string | number | boolean | null, value?: string | number | boolean | null, logicalOperator?: 'and' | 'or') {
     if (value === undefined) {
-      this.conditions.push({ field, operator: 'eq', value: operator as string | number | boolean | null });
+      this.conditions.push({ field, operator: 'eq', value: operator as string | number | boolean | null, logicalOperator: logicalOperator });
     } else {
       const actualOperator = operator as QueryOperator;
-      
       // 检查资源类型是否支持该操作符
       if (actualOperator === 'ne' && !this.supportsNeOperator()) {
         const resourceType = this.isUserResource() ? 'User' : 
@@ -78,53 +78,22 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
           `${resourceType} 资源不支持 'ne' (不等于) 操作符。建议：使用其他操作符或在客户端过滤数据。`
         );
       }
-      
-      this.conditions.push({ field, operator: actualOperator, value });
+      this.conditions.push({ field, operator: actualOperator, value, logicalOperator: logicalOperator });
     }
+  }
+
+  where(field: string, operator: QueryOperator | string | number | boolean | null, value?: string | number | boolean | null): QueryBuilder<T> {
+    this.generateCondition(field, operator, value);
     return this;
   }
 
   and(field: string, operator: QueryOperator | string | number | boolean | null, value?: string | number | boolean | null): QueryBuilder<T> {
-    // 如果 value 未提供，说明省略了 operator，此时 operator 实际上是 value
-    if (value === undefined) {
-      this.conditions.push({ field, operator: 'eq', value: operator as string | number | boolean | null, logicalOperator: 'and' });
-    } else {
-      const actualOperator = operator as QueryOperator;
-      
-      // 检查资源类型是否支持该操作符
-      if (actualOperator === 'ne' && !this.supportsNeOperator()) {
-        const resourceType = this.isUserResource() ? 'User' : 
-                            this.isDeviceResource() ? 'Device' : '当前';
-        throw GraphOrmError.create(
-          GraphErrorCode.INVALID_PARAMETER,
-          `${resourceType} 资源不支持 'ne' (不等于) 操作符。建议：使用其他操作符或在客户端过滤数据。`
-        );
-      }
-      
-      this.conditions.push({ field, operator: actualOperator, value, logicalOperator: 'and' });
-    }
+    this.generateCondition(field, operator, value, 'and');
     return this;
   }
 
   or(field: string, operator: QueryOperator | string | number | boolean | null, value?: string | number | boolean | null): QueryBuilder<T> {
-    // 如果 value 未提供，说明省略了 operator，此时 operator 实际上是 value
-    if (value === undefined) {
-      this.conditions.push({ field, operator: 'eq', value: operator as string | number | boolean | null, logicalOperator: 'or' });
-    } else {
-      const actualOperator = operator as QueryOperator;
-      
-      // 检查资源类型是否支持该操作符
-      if (actualOperator === 'ne' && !this.supportsNeOperator()) {
-        const resourceType = this.isUserResource() ? 'User' : 
-                            this.isDeviceResource() ? 'Device' : '当前';
-        throw GraphOrmError.create(
-          GraphErrorCode.INVALID_PARAMETER,
-          `${resourceType} 资源不支持 'ne' (不等于) 操作符。建议：使用其他操作符或在客户端过滤数据。`
-        );
-      }
-      
-      this.conditions.push({ field, operator: actualOperator, value, logicalOperator: 'or' });
-    }
+    this.generateCondition(field, operator, value, 'or');
     return this;
   }
 
@@ -236,34 +205,6 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
    */
   header(name: string, value: string): QueryBuilder<T> {
     this.customHeaders[name] = value;
-    return this;
-  }
-
-  /**
-   * 设置时区偏好（用于日历事件查询）
-   * 返回事件的开始和结束时间将使用指定的时区
-   * 
-   * @param timezone - 时区名称（Windows 时区或 IANA 时区）
-   * @returns QueryBuilder 实例（支持链式调用）
-   * @see https://learn.microsoft.com/graph/outlook-calendar-concept-overview
-   * @see https://learn.microsoft.com/graph/api/user-list-events#request-headers
-   * @example
-   * ```typescript
-   * // 使用 Windows 时区名称
-   * const events = await orm.events('user@contoso.com')
-   *   .query()
-   *   .timezone('China Standard Time')
-   *   .get();
-   * 
-   * // 使用 IANA 时区名称
-   * const events = await orm.events('user@contoso.com')
-   *   .query()
-   *   .timezone('Asia/Shanghai')
-   *   .get();
-   * ```
-   */
-  timezone(timezone: string): QueryBuilder<T> {
-    this.customHeaders['Prefer'] = `outlook.timezone="${timezone}"`;
     return this;
   }
 
@@ -384,44 +325,6 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
   }
 
   /**
-   * 检查排序是否兼容当前查询
-   * 基于资源类型和使用的操作符进行智能判断
-   */
-  private isSortCompatible(): boolean {
-    if (!this.orderByField) {
-      return true; // 没有排序，总是兼容
-    }
-    
-    // 1. 使用了高级操作符（startswith/endswith/contains）时不支持排序
-    if (this.hasAdvancedOperators()) {
-      return false;
-    }
-    
-    // 2. User 和 Device 资源使用 ne/not 操作符时不支持排序
-    if ((this.isUserResource() || this.isDeviceResource()) && this.hasProblematicOperators()) {
-      return false;
-    }
-    
-    return true;
-  }
-
-  /**
-   * 获取排序不兼容的原因（用于警告消息）
-   */
-  private getSortIncompatibilityReason(): string {
-    if (this.hasAdvancedOperators()) {
-      return '使用高级查询操作符 (startswith/endswith/contains) 时不支持排序';
-    }
-    
-    if ((this.isUserResource() || this.isDeviceResource()) && this.hasProblematicOperators()) {
-      const resourceType = this.isUserResource() ? 'User' : 'Device';
-      return `${resourceType} 资源使用 'ne' 或 'not' 操作符时不支持排序`;
-    }
-    
-    return '当前查询条件不支持排序';
-  }
-
-  /**
    * 构建 $search 查询字符串
    * @see https://learn.microsoft.com/graph/search-query-parameter
    */
@@ -439,51 +342,27 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
    * 获取查询的调试信息
    * 包括请求方法、端点、查询参数和请求头
    * 
+   * 支持的场景：
+   * 1. 查询操作（GET）- 返回查询参数和过滤条件
+   * 2. CRUD 操作 - 返回最后一次执行的 CRUD 操作信息
+   * 
    * @returns 包含完整请求信息的调试对象
    * @example
    * ```typescript
+   * // 查询操作
+   * const users = await queryBuilder.where('displayName', 'eq', 'John').get();
    * const debug = queryBuilder.getDebug();
-   * console.log(debug);
-   * // {
-   * //   method: 'GET',
-   * //   endpoint: '/users',
-   * //   params: { $filter: "displayName eq 'John'", $top: 10 },
-   * //   headers: { ConsistencyLevel: 'eventual' },
-   * //   url: '/users?$filter=displayName%20eq%20%27John%27&$top=10'
-   * // }
+   * // { method: 'GET', endpoint: '/users', params: {...}, headers: {...} }
+   * 
+   * // CRUD 操作
+   * const user = await queryBuilder.create({ displayName: 'John' });
+   * const debug = queryBuilder.getDebug();
+   * // { method: 'POST', endpoint: '/users', body: {...}, headers: {...} }
    * ```
    */
-  public getDebug(): RequestDebugInfo {
-    const params = this.buildQueryParams();
-    const headers: Record<string, string> = { ...this.customHeaders };
-    
-    // 检查是否需要添加 ConsistencyLevel: eventual 头部
-    const needsEventualConsistency = 
-      this.searchQuery ||
-      this.buildSearchQuery() ||
-      this.countOnly ||
-      this.hasAdvancedOperators();
-    
-    if (needsEventualConsistency) {
-      headers['ConsistencyLevel'] = 'eventual';
-    }
-    
-    // 构建完整 URL（用于展示）
-    let url = this.endpoint;
-    if (Object.keys(params).length > 0) {
-      const queryString = Object.entries(params)
-        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-        .join('&');
-      url = `${this.endpoint}?${queryString}`;
-    }
-    
-    return {
-      method: 'GET',
-      endpoint: this.endpoint,
-      params,
-      headers,
-      url
-    };
+  public getDebug(): RequestDebugInfo | undefined {
+    // 否则返回查询操作的调试信息
+    return this.debugInfo;
   }
 
   /**
@@ -556,23 +435,11 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
     
     return params;
   }
-
-  /**
-   * 执行查询并返回结果集合
-   * 
-   * 重要说明：
-   * 1. 使用高级查询功能（$search, $count, 高级操作符）时会自动添加 ConsistencyLevel: eventual
-   * 2. ConsistencyLevel: eventual 意味着最终一致性，可能会有轻微延迟
-   * 
-   * @returns 包含数据和元信息的集合
-   * @throws GraphOrmError 查询失败时抛出
-   * @see https://learn.microsoft.com/graph/aad-advanced-queries
-   */
-  async get(): Promise<GraphCollection<T>> {
+  private buildRequest(): GraphRequest {
     try {
       const params = this.buildQueryParams();
+      const headers = { ...this.customHeaders };
       let request = this.client.api(this.endpoint);
-      
       // 检查是否需要添加 ConsistencyLevel: eventual 头部
       // 以下情况需要：
       // 1. 使用 $search
@@ -585,28 +452,53 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
         this.hasAdvancedOperators();
       
       if (needsEventualConsistency) {
-        request = request.header('ConsistencyLevel', 'eventual');
+        headers['ConsistencyLevel'] = 'eventual';
       }
+      
+      // 添加自定义请求头
+      Object.entries(headers).forEach(([key, value]) => {
+        request = request.header(key, value);
+      });
       
       // 添加查询参数
       if (Object.keys(params).length > 0) {
         request = request.query(params);
       }
-      
-      // 执行请求
-      const response = await request.get();
-      
-      // 转换响应数据，移除 @odata. 前缀
-      return {
-        meta: {
-          nextLink: response['@odata.nextLink'],
-          count: response['@odata.count'],
-        },
-        data: response.value || []
+      this.debugInfo = {
+        method: 'GET',
+        params,
+        headers: headers,
+        url: this.endpoint
       };
+      
+      return request;
     } catch (error) {
       throw GraphOrmError.fromGraphError(error);
     }
+  }
+  /**
+   * 执行查询并返回结果集合
+   * 
+   * 重要说明：
+   * 1. 使用高级查询功能（$search, $count, 高级操作符）时会自动添加 ConsistencyLevel: eventual
+   * 2. ConsistencyLevel: eventual 意味着最终一致性，可能会有轻微延迟
+   * 
+   * @returns 包含数据和元信息的集合
+   * @throws GraphOrmError 查询失败时抛出
+   * @see https://learn.microsoft.com/graph/aad-advanced-queries
+   */
+  async get(): Promise<GraphCollection<T>> {
+    const request = this.buildRequest();
+    this.debugInfo!.method = 'GET';
+    const response = await request.get();
+    this.debugInfo!.response = response;
+    return {
+      meta: {
+        nextLink: response['@odata.nextLink'],
+        count: response['@odata.count'],
+      },
+      data: response.value || []
+    };
   }
 
   /**
@@ -616,15 +508,13 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
    * @returns 第一个匹配的实体
    * @throws GraphOrmError 没有找到结果时抛出 NO_ENTITY_FOUND 错误
    */
-  async first(): Promise<T> {
-    const result = await this.get();
-    if (result.data.length === 0) {
-      throw GraphOrmError.create(
-        GraphErrorCode.NO_ENTITY_FOUND,
-        '未找到符合条件的实体'
-      );
-    }
-    return result.data[0];
+  async first(): Promise<T | null> {
+    this.top(1);
+    const request = this.buildRequest();
+    this.debugInfo!.method = 'GET';
+    const response = await request.get();
+    this.debugInfo!.response = response;
+    return response.data.length === 1 ? response.data[0] : null;
   }
 
   /**
@@ -656,15 +546,8 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
           isFirstPage = false;
         } else if (nextLink) {
           // 后续页：使用 nextLink
-          // nextLink 已包含完整的 URL 和查询参数
-          const response = await this.client.api(nextLink).get();
-          result = {
-            meta: {
-              nextLink: response['@odata.nextLink'],
-              count: response['@odata.count'],
-            },
-            data: response.value || []
-          };
+          this.endpoint = nextLink;
+          result = await this.get();
         } else {
           // 没有更多数据
           break;
@@ -693,11 +576,17 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
    * @example
    * ```typescript
    * const user = await queryBuilder.findById('user-id-123');
+   * const debug = queryBuilder.getDebug();
+   * console.log(debug); // { method: 'GET', endpoint: '/users/user-id-123', ... }
    * ```
    */
-  async findById(id: string): Promise<T> {
+  async findById(id: string): Promise<T | null> {
     try {
-      return await this.client.api(`${this.endpoint}/${encodeURIComponent(id)}`).get();
+      this.endpoint = `${this.endpoint}/${encodeURIComponent(id)}`;
+      this.debugInfo!.method = 'GET';
+      const response = await this.first();
+      this.debugInfo!.response = response;
+      return response;
     } catch (error) {
       throw GraphOrmError.fromGraphError(error);
     }
@@ -715,11 +604,18 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
    *   displayName: 'John Doe',
    *   userPrincipalName: 'john@contoso.com'
    * });
+   * const debug = queryBuilder.getDebug();
+   * console.log(debug); // { method: 'POST', endpoint: '/users', body: {...}, ... }
    * ```
    */
   async create(entity: Omit<T, 'id'>): Promise<T> {
     try {
-      return await this.client.api(this.endpoint).post(entity);
+      const request = this.buildRequest();
+      this.debugInfo!.method = 'POST';
+      this.debugInfo!.payload = entity;
+      const response = await request.post(entity);
+      this.debugInfo!.response = response;
+      return response;
     } catch (error) {
       throw GraphOrmError.fromGraphError(error);
     }
@@ -737,11 +633,21 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
    * const updatedUser = await queryBuilder.update('user-id-123', {
    *   displayName: 'Jane Doe'
    * });
+   * const debug = queryBuilder.getDebug();
+   * console.log(debug); // { method: 'PATCH', endpoint: '/users/user-id-123', body: {...}, ... }
    * ```
    */
-  async update(id: string, entity: Partial<T>): Promise<T> {
+  async update(id: string | null, entity: Partial<T>): Promise<T> {
     try {
-      return await this.client.api(`${this.endpoint}/${encodeURIComponent(id)}`).patch(entity);
+      if(id) {
+        this.endpoint = `${this.endpoint}/${encodeURIComponent(id)}`;
+      }
+      const request = this.buildRequest();
+      this.debugInfo!.method = 'PATCH';
+      this.debugInfo!.payload = entity;
+      const response = await request.patch(entity);
+      this.debugInfo!.response = response;
+      return response;
     } catch (error) {
       throw GraphOrmError.fromGraphError(error);
     }
@@ -755,11 +661,88 @@ export class GraphQueryBuilder<T extends GraphEntity> implements QueryBuilder<T>
    * @example
    * ```typescript
    * await queryBuilder.delete('user-id-123');
+   * const debug = queryBuilder.getDebug();
+   * console.log(debug); // { method: 'DELETE', endpoint: '/users/user-id-123', ... }
    * ```
    */
   async delete(id: string): Promise<void> {
     try {
-      await this.client.api(`${this.endpoint}/${encodeURIComponent(id)}`).delete();
+      this.endpoint = `${this.endpoint}/${encodeURIComponent(id)}`;
+      const request = this.buildRequest();
+      this.debugInfo!.method = 'DELETE';
+      const response = await request.delete();
+      this.debugInfo!.response = response;
+      return response;
+    } catch (error) {
+      throw GraphOrmError.fromGraphError(error);
+    }
+  }
+
+  /**
+   * 执行 PUT 请求（用于文件上传等场景）
+   * 
+   * @param path - 相对于当前 endpoint 的路径（可以为空字符串）
+   * @param body - 请求体（可以是对象、ArrayBuffer、Blob、string 等）
+   * @returns 响应结果
+   * @throws GraphOrmError 请求失败时抛出
+   * @example
+   * ```typescript
+   * // 上传文件
+   * const result = await queryBuilder.put('root:/test.txt:/content', fileContent);
+   * 
+   * // 更新实体（带 ID）
+   * const result = await queryBuilder.put('user-id-123', { displayName: 'New Name' });
+   * ```
+   */
+  async put<TResult = unknown>(path: string, body: unknown): Promise<TResult> {
+    try {
+      this.endpoint = path ? `${this.endpoint}/${path}` : this.endpoint;
+      const request = this.buildRequest();
+      this.debugInfo!.method = 'PUT';
+      this.debugInfo!.payload = body;
+      const response = await request.put(body);
+      this.debugInfo!.response = response;
+      return response;
+    } catch (error) {
+      throw GraphOrmError.fromGraphError(error);
+    }
+  }
+
+  /**
+   * 执行 POST 请求（用于创建资源、执行操作等场景）
+   * 
+   * @param path - 相对于当前 endpoint 的路径
+   * @param body - 请求体（可以是对象、ArrayBuffer、Blob、string 等）
+   * @param id - 实体 ID（可选，用于构建完整端点路径）
+   * @returns 响应结果
+   * @throws GraphOrmError 请求失败时抛出
+   * @example
+   * ```typescript
+   * // 执行操作
+   * await queryBuilder.post('sendMail', { message: {...} });
+   * 
+   * // 在特定实体上执行操作
+   * await queryBuilder.post('move', { destinationId: 'folder-id' }, 'message-id');
+   * 
+   * // 创建子资源
+   * const attachment = await queryBuilder.post<Attachment>('attachments', attachmentData, 'message-id');
+   * ```
+   */
+  async post<TResult = unknown>(path: string, body?: unknown, id?: string): Promise<TResult> {
+    try {
+      // 构建完整端点路径
+      if (id) {
+        this.endpoint = `${this.endpoint}/${encodeURIComponent(id)}/${path}`;
+      } else {
+        this.endpoint = `${this.endpoint}/${path}`;
+      }
+      
+      const request = this.buildRequest();
+      this.debugInfo!.method = 'POST';
+      this.debugInfo!.payload = body;
+      const response = await request.post(body);
+      this.debugInfo!.response = response;
+      return response;
     } catch (error) {
       throw GraphOrmError.fromGraphError(error);
     }

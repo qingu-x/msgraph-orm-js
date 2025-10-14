@@ -18,7 +18,7 @@ export abstract class GraphRepository<T extends GraphEntity> implements EntityMa
   /**
    * 通过 ID 查找实体
    */
-  async findById(id: string): Promise<T> {
+  async findById(id: string): Promise<T | null> {
     return this.query().findById(id);
   }
 
@@ -118,8 +118,8 @@ export abstract class GraphRepository<T extends GraphEntity> implements EntityMa
   /**
    * 创建查询构建器
    */
-  query(): GraphQueryBuilder<T> {
-    return new GraphQueryBuilder<T>(this.client, this.endpoint);
+  query<R = T>(url: string = ''): GraphQueryBuilder<R> {
+    return new GraphQueryBuilder<R>(this.client, this.endpoint + url);
   }
 
   /**

@@ -9,7 +9,7 @@ export class GraphEntityManager<T extends GraphEntity> implements EntityManager<
     private endpoint: string
   ) {}
 
-  async findById(id: string): Promise<T> {
+  async findById(id: string): Promise<T | null> {
     return this.query().findById(id);
   }
 

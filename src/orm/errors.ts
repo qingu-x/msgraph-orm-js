@@ -65,7 +65,7 @@ export class GraphOrmError extends Error {
     const graphError = error as any;
     
     const statusCode = graphError?.statusCode;
-    const errorCode = graphError?.code;
+    // const errorCode = graphError?.code;
     const errorMessage = graphError?.message || '未知错误';
     const requestId = graphError?.requestId;
 

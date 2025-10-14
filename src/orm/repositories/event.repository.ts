@@ -1,7 +1,6 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import { GraphRepository } from '../repository';
-import { Event } from '../types';
-import { GraphOrmError } from '../errors';
+import { Event, GraphCollection } from '../types';
 
 /**
  * 事件仓储
@@ -60,11 +59,11 @@ export class EventRepository extends GraphRepository<Event> {
    * 查询时会自动在 HTTP Header 中添加 Prefer: outlook.timezone，
    * 使返回的事件时间使用指定的时区
    */
-  query() {
-    const builder = super.query();
+  query<R = Event>(path?: string) {
+    const builder = super.query<R>(path);
     // 自动应用默认时区到查询
     if (this.defaultTimeZone && this.defaultTimeZone !== 'UTC') {
-      builder.timezone(this.defaultTimeZone);
+      builder.header('Prefer', `outlook.timezone="${this.defaultTimeZone}"`);
     }
     return builder;
   }
@@ -87,114 +86,82 @@ export class EventRepository extends GraphRepository<Event> {
 
   /**
    * 接受事件邀请
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async accept(eventId: string, comment?: string): Promise<void> {
-    try {
-      await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(eventId)}/accept`)
-        .post({
-          comment: comment || '',
-          sendResponse: true
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().post('accept', {
+      comment: comment || '',
+      sendResponse: true
+    }, eventId);
   }
 
   /**
    * 暂时接受事件邀请
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async tentativelyAccept(eventId: string, comment?: string): Promise<void> {
-    try {
-      await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(eventId)}/tentativelyAccept`)
-        .post({
-          comment: comment || '',
-          sendResponse: true
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().post('tentativelyAccept', {
+      comment: comment || '',
+      sendResponse: true
+    }, eventId);
   }
 
   /**
    * 拒绝事件邀请
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async decline(eventId: string, comment?: string): Promise<void> {
-    try {
-      await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(eventId)}/decline`)
-        .post({
-          comment: comment || '',
-          sendResponse: true
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().post('decline', {
+      comment: comment || '',
+      sendResponse: true
+    }, eventId);
   }
 
   /**
    * 取消事件
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async cancel(eventId: string, comment?: string): Promise<void> {
-    try {
-      await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(eventId)}/cancel`)
-        .post({
-          comment: comment || ''
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().post('cancel', {
+      comment: comment || ''
+    }, eventId);
   }
 
   /**
    * 获取事件实例（针对循环事件）
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async getInstances(
     eventId: string,
     startDateTime: string,
     endDateTime: string
-  ): Promise<Event[]> {
-    try {
-      const response = await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(eventId)}/instances`)
-        .query({
-          startDateTime,
-          endDateTime
-        })
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  ): Promise<GraphCollection<Event>> {
+    return await this.query(`${encodeURIComponent(eventId)}/instances`)
+      .where('start/dateTime', 'ge', '\'' + startDateTime + '\'')
+      .and('end/dateTime', 'le', '\'' + endDateTime + '\'').get();
   }
 
   /**
    * 获取事件附件
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getAttachments(eventId: string): Promise<unknown[]> {
-    try {
-      const response = await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(eventId)}/attachments`)
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getAttachments(eventId: string): Promise<GraphCollection<unknown>> {
+    return await this.query(`${encodeURIComponent(eventId)}/attachments`).get();
   }
 
   /**
    * 添加事件附件
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async addAttachment(eventId: string, attachment: unknown): Promise<unknown> {
-    try {
-      return await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(eventId)}/attachments`)
-        .post(attachment);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().post('attachments', attachment, eventId);
   }
 }
 

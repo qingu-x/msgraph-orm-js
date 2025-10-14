@@ -1,6 +1,7 @@
 import { Client } from '@microsoft/microsoft-graph-client';
-import { Event, Calendar, CalendarGroup, Room, DeltaCollection } from '../types';
+import { Event, Calendar, CalendarGroup, Room, GraphCollection } from '../types';
 import { GraphOrmError, GraphErrorCode } from '../errors';
+import { GraphQueryBuilder } from '../query-builder';
 
 /**
  * 日历服务
@@ -18,88 +19,70 @@ export class CalendarService {
   constructor(private client: Client) {}
 
   /**
-   * 获取用户主日历
+   * 创建 query-builder 实例（私有辅助方法）
    */
-  async getUserCalendar(userId: string): Promise<Calendar> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/calendar`)
-        .get();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  private query<T>(endpoint: string): GraphQueryBuilder<T> {
+    return new GraphQueryBuilder<T>(this.client, endpoint);
+  }
+
+  /**
+   * 获取用户主日历
+   * 
+   * 使用 query-builder 支持调试和自定义 header
+   */
+  async getUserCalendar(userId: string): Promise<Calendar | null> {
+    return this.query<Calendar>(`users/${encodeURIComponent(userId)}/calendar`).first();
   }
 
   /**
    * 获取用户所有日历
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getCalendars(userId: string): Promise<Calendar[]> {
-    try {
-      const response = await this.client
-        .api(`/users/${encodeURIComponent(userId)}/calendars`)
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getCalendars(userId: string): Promise<GraphCollection<Calendar>> {
+    return await this.query<Calendar>(`users/${encodeURIComponent(userId)}/calendars`).get();
   }
 
   /**
    * 创建日历
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async createCalendar(userId: string, calendar: Omit<Calendar, 'id'>): Promise<Calendar> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/calendars`)
-        .post(calendar);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query('').post<Calendar>('calendars', calendar, `users/${encodeURIComponent(userId)}`);
   }
 
   /**
    * 获取日历组
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getCalendarGroups(userId: string): Promise<CalendarGroup[]> {
-    try {
-      const response = await this.client
-        .api(`/users/${encodeURIComponent(userId)}/calendarGroups`)
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getCalendarGroups(userId: string): Promise<GraphCollection<CalendarGroup>> {
+    return await this.query<CalendarGroup>(`users/${encodeURIComponent(userId)}/calendarGroups`).get();
   }
 
   /**
    * 获取日历视图（指定时间范围的事件）
    * 
    * 这是一个特殊的 API，不同于普通的事件查询
+   * 使用 query-builder 支持调试和自定义 header
    */
   async getCalendarView(
     userId: string,
     startDateTime: string,
     endDateTime: string
-  ): Promise<Event[]> {
-    try {
-      const response = await this.client
-        .api(`/users/${encodeURIComponent(userId)}/calendar/calendarView`)
-        .query({
-          startDateTime,
-          endDateTime
-        })
-        .orderby('start/dateTime')
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  ): Promise<GraphCollection<Event>> {
+    return await this.query<Event>(`users/${encodeURIComponent(userId)}/calendar/calendarView`,)
+    .where('start/dateTime', 'ge', '\'' + startDateTime + '\'')
+    .where('end/dateTime', 'le', '\'' + endDateTime + '\'') 
+    .get();
   }
 
   /**
    * 获取忙/闲时间表
    * 
    * 查询指定用户或资源的忙闲状态
+   * 使用 query-builder 支持调试和自定义 header
    */
   async getSchedule(
     schedules: string[],
@@ -107,24 +90,19 @@ export class CalendarService {
     endTime: { dateTime: string; timeZone: string },
     availabilityViewInterval: number = 30
   ): Promise<unknown> {
-    try {
-      return await this.client
-        .api('/me/calendar/getSchedule')
-        .post({
-          schedules,
-          startTime,
-          endTime,
-          availabilityViewInterval
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query('').post('calendar/getSchedule', {
+      schedules,
+      startTime,
+      endTime,
+      availabilityViewInterval
+    }, 'me');
   }
 
   /**
    * 查找会议时间
    * 
    * 根据与会者的日历自动寻找可用的会议时间
+   * 使用 query-builder 支持调试和自定义 header
    */
   async findMeetingTimes(
     attendees: Array<{ emailAddress: { address: string; name?: string }; type: string }>,
@@ -138,18 +116,12 @@ export class CalendarService {
     meetingDuration?: string,
     maxCandidates?: number
   ): Promise<unknown> {
-    try {
-      return await this.client
-        .api('/me/findMeetingTimes')
-        .post({
-          attendees,
-          timeConstraint,
-          meetingDuration,
-          maxCandidates
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query('').post('findMeetingTimes', {
+      attendees,
+      timeConstraint,
+      meetingDuration,
+      maxCandidates
+    }, 'me');
   }
 
   /**
@@ -157,30 +129,19 @@ export class CalendarService {
    * 
    * 权限要求：Place.Read.All
    * 国家云支持：✓ 全球版 ✓ 美国政府版（GCC）⚠️ 中国版（功能受限）
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getRooms(): Promise<Room[]> {
-    try {
-      const response = await this.client
-        .api('/places/microsoft.graph.room')
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getRooms(): Promise<GraphCollection<Room>> {
+    return await this.query<Room>('places/microsoft.graph.room').get();
   }
 
   /**
    * 获取会议室列表（使用 places API）
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getRoomLists(): Promise<Room[]> {
-    try {
-      const response = await this.client
-        .api('/places/microsoft.graph.roomList')
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getRoomLists(): Promise<GraphCollection<Room>> {
+    return await this.query<Room>('places/microsoft.graph.roomList').get();
   }
 
   /**
@@ -188,13 +149,14 @@ export class CalendarService {
    * 
    * 权限要求：Calendars.Read
    * 国家云支持：✓ 全球版 ⚠️ 美国政府版（部分支持）❌ 中国版（不可用）
+   * 使用 query-builder 支持调试和自定义 header
    */
   async findRooms(userId: string): Promise<Room[]> {
     try {
-      const response = await this.client
-        .api(`/users/${encodeURIComponent(userId)}/findRooms`)
-        .post(null);
-      return response.value || response || [];
+      const response = await this.query('').post<{ value: Room[] } | Room[]>(
+        'findRooms', null, `users/${encodeURIComponent(userId)}`
+      );
+      return Array.isArray(response) ? response : (response.value || []);
     } catch (error) {
       const ormError = GraphOrmError.fromGraphError(error);
       if (ormError.code === GraphErrorCode.RESOURCE_NOT_FOUND || 
@@ -207,13 +169,15 @@ export class CalendarService {
 
   /**
    * 查找会议室列表
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async findRoomLists(userId: string): Promise<Room[]> {
     try {
-      const response = await this.client
-        .api(`/users/${encodeURIComponent(userId)}/findRoomLists`)
-        .post(null);
-      return response.value || response || [];
+      const response = await this.query('').post<{ value: Room[] } | Room[]>(
+        'findRoomLists', null, `users/${encodeURIComponent(userId)}`
+      );
+      return Array.isArray(response) ? response : (response.value || []);
     } catch (error) {
       const ormError = GraphOrmError.fromGraphError(error);
       if (ormError.code === GraphErrorCode.RESOURCE_NOT_FOUND || 
@@ -226,13 +190,15 @@ export class CalendarService {
 
   /**
    * 查找指定会议室列表下的会议室
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async findRoomsInList(userId: string, roomListEmail: string): Promise<Room[]> {
     try {
-      const response = await this.client
-        .api(`/users/${encodeURIComponent(userId)}/findRooms(RoomList='${roomListEmail}')`)
-        .post(null);
-      return response.value || response || [];
+      const response = await this.query('').post<{ value: Room[] } | Room[]>(
+        `findRooms(RoomList='${roomListEmail}')`, null, `users/${encodeURIComponent(userId)}`
+      );
+      return Array.isArray(response) ? response : (response.value || []);
     } catch (error) {
       const ormError = GraphOrmError.fromGraphError(error);
       if (ormError.code === GraphErrorCode.RESOURCE_NOT_FOUND || 
@@ -247,22 +213,10 @@ export class CalendarService {
    * 事件增量查询
    * 
    * 跟踪事件的变化（新增、修改、删除）
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async deltaEvents(userId: string, deltaLink?: string): Promise<DeltaCollection<Event>> {
-    try {
-      const endpoint = deltaLink || `/users/${encodeURIComponent(userId)}/events/delta`;
-      const response = await this.client.api(endpoint).get();
-      
-      return {
-        meta: {
-          deltaLink: response['@odata.deltaLink'],
-          nextLink: response['@odata.nextLink'],
-          count: response['@odata.count'],
-        },
-        data: response.value || []
-      };
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async deltaEvents(userId: string, deltaLink?: string): Promise<GraphCollection<Event>> {
+    const endpoint = deltaLink || `users/${encodeURIComponent(userId)}/events/delta`;
+    return await this.query<Event>(endpoint).get();
   }
 }

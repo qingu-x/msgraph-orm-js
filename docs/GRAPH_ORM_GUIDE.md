@@ -4,6 +4,13 @@
 
 本 SDK 提供了一个完整的 ORM（对象关系映射）层来简化 Microsoft Graph API 的使用，支持全球版和国家云部署（中国、美国政府版等）。
 
+### 🆕 新版本特性
+
+- **统一调试**: 所有请求都支持 `getDebug()` 和 `getRaw()` 调试功能
+- **自定义 Headers**: 统一的自定义 header 管理
+- **QueryBuilder 扩展**: 新增 `put()`, `post()`, `request()`, `patch()`, `deletePath()` 通用方法
+- **服务层重构**: 所有服务都使用统一的 QueryBuilder 处理请求
+
 ## 国家云部署支持
 
 ### 支持的云环境
@@ -77,6 +84,44 @@ const result = await orm.users.query()
   .orderBy('displayName', 'asc')
   .select(['id', 'displayName', 'mail'])
   .top(20)
+  .get();
+```
+
+#### 调试和监控
+
+```typescript
+// 获取调试信息
+const query = orm.users.query()
+  .where('department', 'eq', 'IT')
+  .select(['id', 'displayName', 'mail']);
+
+// 执行前获取调试信息
+const debugInfo = query.getDebug();
+console.log('请求方法:', debugInfo.method);
+console.log('请求 URL:', debugInfo.url);
+console.log('查询参数:', debugInfo.queryParams);
+console.log('请求头:', debugInfo.headers);
+
+// 获取原始请求参数（不执行请求）
+const rawParams = query.getRaw();
+console.log('原始参数:', rawParams);
+
+// 执行请求
+const users = await query.get();
+
+// 执行后获取最后请求的调试信息
+const lastDebugInfo = query.getDebug();
+console.log('最后请求信息:', lastDebugInfo);
+```
+
+#### 自定义 Headers
+
+```typescript
+// 为查询添加自定义 headers
+const users = await orm.users.query()
+  .header('ConsistencyLevel', 'eventual')
+  .header('Prefer', 'outlook.timezone="Asia/Shanghai"')
+  .where('displayName', 'startswith', '张')
   .get();
 ```
 
@@ -471,6 +516,55 @@ async function getRooms(userId: string) {
     }
   }
 }
+```
+
+### 6. 调试和监控最佳实践
+
+```typescript
+// 在生产环境中记录请求信息
+async function debugRequest(query: any, operation: string) {
+  const debugInfo = query.getDebug();
+  console.log(`${operation} 请求信息:`, {
+    method: debugInfo.method,
+    url: debugInfo.url,
+    headers: debugInfo.headers,
+    timestamp: new Date().toISOString()
+  });
+  
+  try {
+    const result = await query.get();
+    console.log(`${operation} 成功，返回 ${result.data?.length || 1} 条记录`);
+    return result;
+  } catch (error) {
+    console.error(`${operation} 失败:`, error);
+    throw error;
+  }
+}
+
+// 使用示例
+const users = await debugRequest(
+  orm.users.query().where('department', 'eq', 'IT'),
+  '查询 IT 部门用户'
+);
+```
+
+### 7. 服务层调试
+
+```typescript
+// 邮件服务调试
+await orm.mail.send('user-id', message);
+const mailDebugInfo = orm.mail.getDebug();
+console.log('邮件发送调试信息:', mailDebugInfo);
+
+// 文件服务调试
+await orm.files.uploadSmallFile('user-id', path, buffer);
+const fileDebugInfo = orm.files.getDebug();
+console.log('文件上传调试信息:', fileDebugInfo);
+
+// 日历服务调试
+await orm.calendar.createEvent('user-id', event);
+const calendarDebugInfo = orm.calendar.getDebug();
+console.log('日历事件调试信息:', calendarDebugInfo);
 ```
 
 ## 权限参考

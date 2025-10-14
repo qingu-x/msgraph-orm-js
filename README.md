@@ -17,6 +17,8 @@ Microsoft Graph 的 ORM 封装，提供简洁、类型安全、符合 ORM 规范
 - 🔍 **强大查询构建器**: 支持复杂查询、分页、排序
 - ⚡ **高级功能**: Delta Query、批处理、Webhooks
 - 📦 **模块化设计**: 按需使用仓储和服务
+- 🐛 **统一调试**: 所有请求支持 `getDebug()` 和 `getRaw()` 调试功能
+- 🔧 **自定义 Headers**: 统一的自定义 header 管理
 
 ## 🆕 新版本亮点
 
@@ -83,6 +85,10 @@ const users = await orm.users
   .select(['displayName', 'mail'])
   .top(10)
   .get();
+
+// 调试信息（新功能）
+const debugInfo = orm.users.query().getDebug();
+console.log('请求调试信息:', debugInfo);
 
 // 文件操作（服务）
 await orm.files.uploadSmallFile('user-id', '/path/file.pdf', buffer);
@@ -421,6 +427,42 @@ const schedule = await orm.calendar.getSchedule(
 ```
 
 ## ⚡ 高级功能
+
+### 调试和监控
+
+```typescript
+// 获取请求调试信息
+const query = orm.users.query().where('department', 'eq', 'IT');
+const debugInfo = query.getDebug();
+console.log('请求方法:', debugInfo.method);
+console.log('请求 URL:', debugInfo.url);
+console.log('请求头:', debugInfo.headers);
+
+// 获取原始请求参数（不执行请求）
+const rawParams = query.getRaw();
+console.log('请求参数:', rawParams);
+
+// 执行请求后获取调试信息
+const users = await query.get();
+const lastDebugInfo = query.getDebug();
+console.log('最后请求的调试信息:', lastDebugInfo);
+```
+
+### 自定义 Headers
+
+```typescript
+// 为所有请求添加自定义 header
+const query = orm.users.query()
+  .header('ConsistencyLevel', 'eventual')
+  .header('Prefer', 'outlook.timezone="Asia/Shanghai"')
+  .where('displayName', 'startswith', '张')
+  .get();
+
+// 服务层也支持自定义 headers
+await orm.mail.send('user-id', message, {
+  'X-Custom-Header': 'value'
+});
+```
 
 ### 增量查询 (Delta Query)
 

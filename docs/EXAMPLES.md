@@ -59,7 +59,7 @@ const orm = createGraphORM(client);
 
 ## 架构说明：Repository vs Service
 
-新版 ORM 采用清晰的架构设计：
+新版 ORM 采用清晰的架构设计，所有请求都通过统一的 QueryBuilder 处理：
 
 ### Repository（仓储）- 实体 CRUD 和查询
 
@@ -84,6 +84,11 @@ await orm.users.events('user-id').delete('event-id');
 // 3. 实体特定操作
 await orm.users.messages('user-id').reply('message-id', '收到');
 await orm.users.events('user-id').accept('event-id', '我会参加');
+
+// 4. 调试和监控（新功能）
+const query = orm.users.query().where('department', 'eq', 'IT');
+const debugInfo = query.getDebug();
+console.log('请求信息:', debugInfo);
 ```
 
 ### Service（服务）- 业务逻辑
@@ -103,6 +108,10 @@ const rooms = await orm.calendar.findRooms('user-id');
 // 3. 快捷访问
 const inbox = await orm.mail.getInbox('user-id', 20);  // 直接获取收件箱
 const drafts = await orm.mail.getDrafts('user-id');    // 直接获取草稿箱
+
+// 4. 调试和监控（新功能）
+const debugInfo = orm.mail.getDebug();  // 获取最后请求的调试信息
+console.log('邮件服务调试信息:', debugInfo);
 ```
 
 ### 选择原则
@@ -115,6 +124,8 @@ const drafts = await orm.mail.getDrafts('user-id');    // 直接获取草稿箱
 | 业务逻辑 | ❌ | ✅ |
 | 特殊 API | ❌ | ✅ |
 | 快捷方法 | ❌ | ✅ |
+| 调试功能 | ✅ | ✅ |
+| 自定义 Headers | ✅ | ✅ |
 
 ## 用户管理
 
@@ -899,6 +910,76 @@ batchResponse.responses.forEach(response => {
   console.log(`请求 ${response.id}: 状态 ${response.status}`);
   console.log('响应:', response.body);
 });
+```
+
+## 调试和监控
+
+### 请求调试
+
+```typescript
+// 获取查询构建器的调试信息
+const query = orm.users.query()
+  .where('department', 'eq', 'IT')
+  .select(['id', 'displayName', 'mail'])
+  .top(10);
+
+// 执行前获取调试信息
+const debugInfo = query.getDebug();
+console.log('请求方法:', debugInfo.method);
+console.log('请求 URL:', debugInfo.url);
+console.log('查询参数:', debugInfo.queryParams);
+console.log('请求头:', debugInfo.headers);
+
+// 获取原始请求参数（不执行请求）
+const rawParams = query.getRaw();
+console.log('原始参数:', rawParams);
+
+// 执行请求
+const users = await query.get();
+
+// 执行后获取最后请求的调试信息
+const lastDebugInfo = query.getDebug();
+console.log('最后请求信息:', lastDebugInfo);
+```
+
+### 服务层调试
+
+```typescript
+// 邮件服务调试
+await orm.mail.send('user-id', message);
+const mailDebugInfo = orm.mail.getDebug();
+console.log('邮件发送调试信息:', mailDebugInfo);
+
+// 文件服务调试
+await orm.files.uploadSmallFile('user-id', path, buffer);
+const fileDebugInfo = orm.files.getDebug();
+console.log('文件上传调试信息:', fileDebugInfo);
+
+// 日历服务调试
+await orm.calendar.createEvent('user-id', event);
+const calendarDebugInfo = orm.calendar.getDebug();
+console.log('日历事件调试信息:', calendarDebugInfo);
+```
+
+### 自定义 Headers
+
+```typescript
+// 为查询添加自定义 headers
+const users = await orm.users.query()
+  .header('ConsistencyLevel', 'eventual')
+  .header('Prefer', 'outlook.timezone="Asia/Shanghai"')
+  .where('displayName', 'startswith', '张')
+  .get();
+
+// 为服务调用添加自定义 headers
+await orm.mail.send('user-id', message, {
+  'X-Custom-Header': 'value',
+  'ConsistencyLevel': 'eventual'
+});
+
+// 检查应用的 headers
+const debugInfo = orm.mail.getDebug();
+console.log('应用的 headers:', debugInfo.headers);
 ```
 
 ## 完整示例

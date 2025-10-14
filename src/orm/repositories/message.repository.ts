@@ -1,7 +1,6 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import { GraphRepository } from '../repository';
-import { Message, Attachment, FileAttachment } from '../types';
-import { GraphOrmError } from '../errors';
+import { Message, Attachment, FileAttachment, GraphCollection } from '../types';
 
 /**
  * 邮件仓储
@@ -18,82 +17,62 @@ export class MessageRepository extends GraphRepository<Message> {
 
   /**
    * 回复邮件
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async reply(messageId: string, comment?: string): Promise<void> {
-    try {
-      await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(messageId)}/reply`)
-        .post({
-          comment: comment || ''
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().post('reply', {
+      comment: comment || ''
+    }, messageId);
   }
 
   /**
    * 全部回复
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async replyAll(messageId: string, comment?: string): Promise<void> {
-    try {
-      await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(messageId)}/replyAll`)
-        .post({
-          comment: comment || ''
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().post('replyAll', {
+      comment: comment || ''
+    }, messageId);
   }
 
   /**
    * 转发邮件
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async forward(
     messageId: string,
     toRecipients: Array<{ emailAddress: { address: string; name?: string } }>,
     comment?: string
   ): Promise<void> {
-    try {
-      await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(messageId)}/forward`)
-        .post({
-          toRecipients,
-          comment: comment || ''
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().post('forward', {
+      toRecipients,
+      comment: comment || ''
+    }, messageId);
   }
 
   /**
    * 移动邮件到文件夹
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async move(messageId: string, destinationFolderId: string): Promise<Message> {
-    try {
-      return await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(messageId)}/move`)
-        .post({
-          destinationId: destinationFolderId
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().post<Message>('move', {
+      destinationId: destinationFolderId
+    }, messageId);
   }
 
   /**
    * 复制邮件到文件夹
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async copy(messageId: string, destinationFolderId: string): Promise<Message> {
-    try {
-      return await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(messageId)}/copy`)
-        .post({
-          destinationId: destinationFolderId
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().post<Message>('copy', {
+      destinationId: destinationFolderId
+    }, messageId);
   }
 
   /**
@@ -119,45 +98,34 @@ export class MessageRepository extends GraphRepository<Message> {
 
   /**
    * 获取邮件附件
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getAttachments(messageId: string): Promise<Attachment[]> {
-    try {
-      const response = await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(messageId)}/attachments`)
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getAttachments(messageId: string): Promise<GraphCollection<Attachment>> {
+    return await this.query<Attachment>(`${encodeURIComponent(messageId)}/attachments`).get();
   }
 
   /**
    * 添加附件
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async addAttachment(
     messageId: string,
     attachment: Omit<FileAttachment, 'id'>
   ): Promise<Attachment> {
-    try {
-      return await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(messageId)}/attachments`)
-        .post(attachment);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().post<Attachment>('attachments', attachment, messageId);
   }
 
   /**
    * 删除附件
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async deleteAttachment(messageId: string, attachmentId: string): Promise<void> {
-    try {
-      await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`)
-        .delete();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().delete(
+      `${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`
+    );
   }
 }
 

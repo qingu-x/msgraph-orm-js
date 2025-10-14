@@ -1,6 +1,6 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import { GraphRepository } from '../repository';
-import { User, Group, Drive, LicenseDetails, MailboxSettings } from '../types';
+import { User, Group, Drive, LicenseDetails, MailboxSettings, GraphCollection } from '../types';
 import { GraphOrmError } from '../errors';
 import { MessageRepository } from './message.repository';
 import { EventRepository } from './event.repository';
@@ -126,125 +126,92 @@ export class UserRepository extends GraphRepository<User> {
 
   /**
    * 获取用户的驱动器
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getDrive(userId: string): Promise<Drive> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/drive`)
-        .get();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getDrive(userId: string): Promise<Drive | null> {
+    return this.query(`${encodeURIComponent(userId)}/drive`).first();
   }
 
   /**
    * 获取用户许可证详情
    * 
    * 权限要求：User.Read.All, Directory.Read.All
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getLicenses(userId: string): Promise<LicenseDetails[]> {
-    try {
-      const response = await this.client
-        .api(`/users/${encodeURIComponent(userId)}/licenseDetails`)
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getLicenses(userId: string): Promise<GraphCollection<LicenseDetails>> {
+    return await this.query<LicenseDetails>(`${encodeURIComponent(userId)}/licenseDetails`).get();
   }
 
   /**
    * 分配许可证给用户
    * 
    * 权限要求：User.ReadWrite.All, Directory.ReadWrite.All
+   * 使用 query-builder 支持调试和自定义 header
    */
   async assignLicense(
     userId: string,
     addLicenses: Array<{ skuId: string; disabledPlans?: string[] }>,
     removeLicenses: string[] = []
   ): Promise<User> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/assignLicense`)
-        .post({
-          addLicenses,
-          removeLicenses
-        });
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query().post<User>('assignLicense', {
+      addLicenses,
+      removeLicenses
+    }, userId);
   }
 
   /**
    * 获取用户邮箱设置
    * 
    * 权限要求：MailboxSettings.Read, MailboxSettings.ReadWrite
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getMailboxSettings(userId: string): Promise<MailboxSettings> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/mailboxSettings`)
-        .get();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getMailboxSettings(userId: string): Promise<MailboxSettings | null> {
+    return this.query<MailboxSettings>(`${encodeURIComponent(userId)}/mailboxSettings`).first();
   }
 
   /**
    * 更新用户邮箱设置
    * 
    * 权限要求：MailboxSettings.ReadWrite
+   * 使用 query-builder 支持调试和自定义 header
    */
   async updateMailboxSettings(userId: string, settings: Partial<MailboxSettings>): Promise<MailboxSettings> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/mailboxSettings`)
-        .patch(settings);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query<MailboxSettings>(`${encodeURIComponent(userId)}/mailboxSettings`).update(null, settings);
   }
 
   /**
    * 获取用户的经理
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async getManager(userId: string): Promise<User | null> {
     try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/manager`)
-        .get();
+      return await this.query(`${encodeURIComponent(userId)}/manager`).first();
     } catch (error) {
       if (error instanceof GraphOrmError && error.code === 'RESOURCE_NOT_FOUND') {
         return null;
       }
-      throw GraphOrmError.fromGraphError(error);
+      throw error;
     }
   }
 
   /**
    * 获取用户照片（元数据）
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getPhotoMetadata(userId: string): Promise<{ width: number; height: number; id: string }> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/photo`)
-        .get();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getPhotoMetadata(userId: string): Promise<{ width: number; height: number; id: string } | null> {
+    return this.query<{ width: number; height: number; id: string }>(`${encodeURIComponent(userId)}/photo`).first();
   }
 
   /**
    * 获取用户照片内容
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getPhotoContent(userId: string): Promise<Blob> {
-    try {
-      return await this.client
-        .api(`/users/${encodeURIComponent(userId)}/photo/$value`)
-        .get();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getPhotoContent(userId: string): Promise<Blob | null> {
+    return this.query<Blob>(`${encodeURIComponent(userId)}/photo/$value`).first();
   }
 }
 

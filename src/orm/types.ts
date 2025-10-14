@@ -1,8 +1,9 @@
 // Graph ORM 类型定义
 export interface GraphEntity {
-  id: string;
+  id?: string;
   '@odata.etag'?: string;
   '@odata.context'?: string;
+  [key: string]: unknown;
 }
 
 export interface GraphCollection<T> {
@@ -31,7 +32,7 @@ export interface QueryCondition {
 }
 
 // 查询构建器接口
-export interface QueryBuilder<T> {
+export interface QueryBuilder<T = unknown> {
   where(field: string, operator: QueryOperator | string | number | boolean | null, value?: string | number | boolean | null): QueryBuilder<T>;
   and(field: string, operator: QueryOperator | string | number | boolean | null, value?: string | number | boolean | null): QueryBuilder<T>;
   or(field: string, operator: QueryOperator | string | number | boolean | null, value?: string | number | boolean | null): QueryBuilder<T>;
@@ -45,32 +46,33 @@ export interface QueryBuilder<T> {
   format(format: 'json' | 'atom'): QueryBuilder<T>;
   count(): QueryBuilder<T>;
   header(name: string, value: string): QueryBuilder<T>;
-  timezone(timezone: string): QueryBuilder<T>;
-  getDebug(): RequestDebugInfo;
+  getDebug(): RequestDebugInfo | undefined;
   get(): Promise<GraphCollection<T>>;
-  first(): Promise<T>;
+  first(): Promise<T | null>;
   pagination(): AsyncIterableIterator<T>;
   // CRUD 操作
-  findById(id: string): Promise<T>;
+  findById(id: string): Promise<T | null>;
   create(entity: Omit<T, 'id'>): Promise<T>;
   update(id: string, entity: Partial<T>): Promise<T>;
   delete(id: string): Promise<void>;
+  // 通用请求方法
+  put<TResult = unknown>(path: string, body: unknown): Promise<TResult>;
+  post<TResult = unknown>(path: string, body?: unknown, id?: string): Promise<TResult>;
 }
 
 // 请求调试信息
 export interface RequestDebugInfo {
   method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
-  endpoint: string;
-  url: string;
-  headers?: Record<string, string>;
-  body?: Record<string, unknown>;
-  params?: Record<string, string | number>;
-  response?: unknown;
+  url: string; // 完整请求 URL（包含查询参数），getRaw() 不包含此字段
+  params: Record<string, string | number>; // OData 查询参数
+  headers: Record<string, string>; // 请求头
+  payload?: unknown; // 请求体
+  response?: unknown; // 响应数据（预留字段）
 }
 
 // 实体管理器接口
 export interface EntityManager<T extends GraphEntity> {
-  findById(id: string): Promise<T>;
+  findById(id: string): Promise<T | null>;
   findOne(query: Partial<T>): Promise<T | null>;
   findMany(query?: Partial<T>): Promise<GraphCollection<T>>;
   create(entity: Omit<T, 'id'>): Promise<T>;

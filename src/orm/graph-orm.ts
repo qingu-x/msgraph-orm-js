@@ -5,21 +5,19 @@ import { FileService } from './services/file.service';
 import { MailService } from './services/mail.service';
 import { CalendarService } from './services/calendar.service';
 import { GenericRepository } from './repository';
+import { GraphQueryBuilder } from './query-builder';
 import {
   Device,
   Application,
   ServicePrincipal,
   Team,
-  Channel,
   Chat,
   Plan,
-  Task,
   Subscription,
   DirectoryRole,
   DirectoryRoleTemplate,
   AdministrativeUnit,
   Site,
-  Contact,
   DeltaCollection,
   SearchRequest,
   SearchResponse,
@@ -30,7 +28,8 @@ import {
   DirectoryObject,
   Message,
   Event,
-  DriveItem
+  DriveItem,
+  GraphCollection
 } from './types';
 import { GraphOrmError, GraphErrorCode } from './errors';
 
@@ -227,6 +226,13 @@ export class GraphORM {
     this.calendar = new CalendarService(client);
   }
 
+  /**
+   * 创建 query-builder 实例（私有辅助方法）
+   */
+  private query<T>(endpoint: string) {
+    return new GraphQueryBuilder<T>(this.client, endpoint);
+  }
+
   // ==================== 便捷访问方法 ====================
 
   /**
@@ -260,41 +266,30 @@ export class GraphORM {
    * 获取当前认证用户信息
    * 
    * 注意：此方法需要委托权限，不适用于纯应用权限场景
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async me(): Promise<User> {
-    try {
-      return await this.client.api('/me').get();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async me(): Promise<User | null> {
+    return await this.query<User>('me').first();
   }
 
   /**
    * 获取组织信息
    * 
    * 权限要求：Organization.Read.All
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async organization(): Promise<unknown> {
-    try {
-      const response = await this.client.api('/organization').get();
-      return response.value[0];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async organization(): Promise<unknown | null> {
+    return await this.query<unknown>('organization').first();
   }
 
   /**
    * 获取订阅的 SKU
    * 
    * 权限要求：Organization.Read.All, Directory.Read.All
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getSubscribedSkus(): Promise<SubscribedSku[]> {
-    try {
-      const response = await this.client.api('/subscribedSkus').get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getSubscribedSkus(): Promise<GraphCollection<SubscribedSku>> {
+    return await this.query<SubscribedSku>('subscribedSkus').get();
   }
 
   // ==================== Delta Query（增量查询）====================
@@ -303,50 +298,27 @@ export class GraphORM {
    * 用户增量查询
    * 
    * 权限要求：User.Read.All
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async deltaUsers(deltaLink?: string): Promise<DeltaCollection<User>> {
-    try {
-      const endpoint = deltaLink || '/users/delta';
-      const response = await this.client.api(endpoint).get();
-      
-      return {
-        meta: {
-          deltaLink: response['@odata.deltaLink'],
-          nextLink: response['@odata.nextLink'],
-          count: response['@odata.count'],
-        },
-        data: response.value || []
-      };
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async deltaUsers(deltaLink?: string): Promise<GraphCollection<User>> {
+    const endpoint = deltaLink || 'users/delta';
+    return await this.query<User>(endpoint).get();
   }
 
   /**
    * 组增量查询
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async deltaGroups(deltaLink?: string): Promise<DeltaCollection<Group>> {
-    try {
-      const endpoint = deltaLink || '/groups/delta';
-      const response = await this.client.api(endpoint).get();
-      
-      return {
-        meta: {
-          deltaLink: response['@odata.deltaLink'],
-          nextLink: response['@odata.nextLink'],
-          count: response['@odata.count'],
-        },
-        data: response.value || []
-      };
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async deltaGroups(deltaLink?: string): Promise<GraphCollection<Group>> {
+    const endpoint = deltaLink || 'groups/delta';
+    return await this.query<Group>(endpoint).get();
   }
 
   /**
    * 邮件增量查询
    */
-  async deltaMessages(userId: string, deltaLink?: string): Promise<DeltaCollection<Message>> {
+  async deltaMessages(userId: string, deltaLink?: string): Promise<GraphCollection<Message>> {
     return this.mail.delta(userId, deltaLink);
   }
 
@@ -371,19 +343,15 @@ export class GraphORM {
    * 
    * 权限要求：根据搜索的资源类型而定
    * 国家云支持：✓ 全球版 ⚠️ 中国版（不可用）✓ 美国政府版（GCC）
+   * 使用 query-builder 支持调试和自定义 header
    */
   async search(searchRequest: SearchRequest): Promise<SearchResponse> {
-    try {
-      const response = await this.client
-        .api('/search/query')
-        .post({
-          requests: [searchRequest]
-        });
-      
-      return response.value[0];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    const response = await this.query('').post<{ value: SearchResponse[] }>(
+      'query',
+      { requests: [searchRequest] },
+      'search'
+    );
+    return response.value[0];
   }
 
   /**
@@ -433,6 +401,7 @@ export class GraphORM {
    *   { id: '2', method: 'GET', url: '/users/user2@contoso.com' }
    * ]);
    * ```
+   * 使用 query-builder 支持调试和自定义 header
    */
   async batch(requests: Array<{
     id: string;
@@ -448,22 +417,21 @@ export class GraphORM {
       body: unknown;
     }>;
   }> {
-    try {
-      if (requests.length > 20) {
-        throw GraphOrmError.create(
-          GraphErrorCode.INVALID_PARAMETER,
-          '批处理请求最多支持 20 个请求'
-        );
-      }
-
-      const response = await this.client
-        .api('/$batch')
-        .post({ requests });
-
-      return response;
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
+    if (requests.length > 20) {
+      throw GraphOrmError.create(
+        GraphErrorCode.INVALID_PARAMETER,
+        '批处理请求最多支持 20 个请求'
+      );
     }
+
+    return this.query('').post<{
+      responses: Array<{
+        id: string;
+        status: number;
+        headers?: Record<string, string>;
+        body: unknown;
+      }>;
+    }>('$batch', { requests });
   }
 
   // ==================== 邀请管理 ====================
@@ -474,15 +442,10 @@ export class GraphORM {
    * 邀请外部用户加入组织
    * 
    * 权限要求：User.Invite.All
+   * 使用 query-builder 支持调试和自定义 header
    */
   async createInvitation(invitation: Omit<Invitation, 'id'>): Promise<Invitation> {
-    try {
-      return await this.client
-        .api('/invitations')
-        .post(invitation);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return this.query('').post<Invitation>('invitations', invitation);
   }
 
   // ==================== 目录对象 ====================
@@ -491,61 +454,56 @@ export class GraphORM {
    * 通过 ID 获取目录对象
    * 
    * 权限要求：Directory.Read.All
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getDirectoryObject(id: string): Promise<DirectoryObject> {
-    try {
-      return await this.client
-        .api(`/directoryObjects/${encodeURIComponent(id)}`)
-        .get();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getDirectoryObject(id: string): Promise<DirectoryObject | null> {
+    return this.query<DirectoryObject>(`directoryObjects/${encodeURIComponent(id)}`).first();
   }
 
   /**
    * 通过 ID 列表获取目录对象（最多 1000 个）
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async getDirectoryObjectsByIds(ids: string[], types?: string[]): Promise<DirectoryObject[]> {
-    try {
-      const body: { ids: string[]; types?: string[] } = { ids };
-      if (types && types.length > 0) {
-        body.types = types;
-      }
-      const response = await this.client
-        .api('/directoryObjects/getByIds')
-        .post(body);
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
+    const body: { ids: string[]; types?: string[] } = { ids };
+    if (types && types.length > 0) {
+      body.types = types;
     }
+    const response = await this.query('').post<{ value: DirectoryObject[] }>(
+      'getByIds',
+      body,
+      'directoryObjects'
+    );
+    return response.value || [];
   }
 
   /**
    * 检查成员组
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async checkMemberGroups(memberId: string, groupIds: string[]): Promise<string[]> {
-    try {
-      const response = await this.client
-        .api(`/directoryObjects/${encodeURIComponent(memberId)}/checkMemberGroups`)
-        .post({ groupIds });
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    const response = await this.query('').post<{ value: string[] }>(
+      'checkMemberGroups',
+      { groupIds },
+      `directoryObjects/${encodeURIComponent(memberId)}`
+    );
+    return response.value || [];
   }
 
   /**
    * 获取成员对象
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async getMemberObjects(directoryObjectId: string, securityEnabledOnly: boolean = false): Promise<string[]> {
-    try {
-      const response = await this.client
-        .api(`/directoryObjects/${encodeURIComponent(directoryObjectId)}/getMemberObjects`)
-        .post({ securityEnabledOnly });
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    const response = await this.query('').post<{ value: string[] }>(
+      'getMemberObjects',
+      { securityEnabledOnly },
+      `directoryObjects/${encodeURIComponent(directoryObjectId)}`
+    );
+    return response.value || [];
   }
 
   // ==================== 报告 API ====================
@@ -554,15 +512,10 @@ export class GraphORM {
    * 获取 Office 365 活动用户详情
    * 
    * 权限要求：Reports.Read.All
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getOffice365ActiveUserDetail(period: 'D7' | 'D30' | 'D90' | 'D180'): Promise<string> {
-    try {
-      return await this.client
-        .api(`/reports/getOffice365ActiveUserDetail(period='${period}')`)
-        .get();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getOffice365ActiveUserDetail(period: 'D7' | 'D30' | 'D90' | 'D180'): Promise<string | null> {
+    return this.query<string>(`reports/getOffice365ActiveUserDetail(period='${period}')`).first();
   }
 }
 

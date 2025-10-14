@@ -1,7 +1,6 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import { GraphRepository } from '../repository';
-import { DriveItem } from '../types';
-import { GraphOrmError } from '../errors';
+import { DriveItem, GraphCollection } from '../types';
 
 /**
  * 驱动器项仓储
@@ -18,152 +17,114 @@ export class DriveItemRepository extends GraphRepository<DriveItem> {
 
   /**
    * 通过路径获取项
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getByPath(itemPath: string): Promise<DriveItem> {
-    try {
-      // 移除 endpoint 中的 /children 部分（如果存在）
-      const baseEndpoint = this.endpoint.replace(/\/children$/, '');
-      return await this.client
-        .api(`${baseEndpoint}:${itemPath}`)
-        .get();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getByPath(itemPath: string): Promise<DriveItem | null> {
+    // 移除 endpoint 中的 /children 部分（如果存在）
+    const baseEndpoint = this.endpoint.replace(/\/children$/, '');
+    const pathSegment = baseEndpoint.split('/').pop(); // 获取最后一段
+    return this.query(`../${pathSegment}:${itemPath}`).first();
   }
 
   /**
    * 列出子项
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async listChildren(itemId: string): Promise<DriveItem[]> {
-    try {
-      const endpoint = itemId === 'root'
-        ? `${this.endpoint}/root/children`
-        : `${this.endpoint}/${encodeURIComponent(itemId)}/children`;
-      
-      const response = await this.client.api(endpoint).get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async listChildren(itemId: string): Promise<GraphCollection<DriveItem>> {
+    const path = itemId === 'root'
+      ? 'root/children'
+      : `${encodeURIComponent(itemId)}/children`;
+    
+    return await this.query(path).get();
   }
 
   /**
    * 移动项
+   * 
+   * 使用 update 方法（基于 query-builder）支持调试和自定义 header
    */
   async move(
     itemId: string,
     targetParentId: string,
     newName?: string
   ): Promise<DriveItem> {
-    try {
-      const body: { parentReference: { id: string }; name?: string } = {
-        parentReference: { id: targetParentId }
-      };
-      if (newName) {
-        body.name = newName;
-      }
-      return await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(itemId)}`)
-        .patch(body);
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
+    const body: { parentReference: { id: string }; name?: string } = {
+      parentReference: { id: targetParentId }
+    };
+    if (newName) {
+      body.name = newName;
     }
+    return this.update(itemId, body as Partial<DriveItem>);
   }
 
   /**
    * 复制项
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async copy(
     itemId: string,
     targetParentId: string,
     newName?: string
   ): Promise<string> {
-    try {
-      const body: { parentReference: { id: string }; name?: string } = {
-        parentReference: { id: targetParentId }
-      };
-      if (newName) {
-        body.name = newName;
-      }
-      const response = await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(itemId)}/copy`)
-        .post(body);
-      return response;
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
+    const body: { parentReference: { id: string }; name?: string } = {
+      parentReference: { id: targetParentId }
+    };
+    if (newName) {
+      body.name = newName;
     }
+    return this.query().post(`${encodeURIComponent(itemId)}/copy`, body);
   }
 
   /**
    * 获取下载 URL
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async getDownloadUrl(itemId: string): Promise<string> {
-    try {
-      const item = await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(itemId)}`)
-        .select('@microsoft.graph.downloadUrl')
-        .get();
-      return item['@microsoft.graph.downloadUrl'];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    const item = await this.query()
+      .select(['@microsoft.graph.downloadUrl'])
+      .findById(itemId);
+    return (item as unknown as { '@microsoft.graph.downloadUrl': string })['@microsoft.graph.downloadUrl'];
   }
 
   /**
    * 搜索项
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async search(query: string): Promise<DriveItem[]> {
-    try {
-      // 从 endpoint 提取 drive 路径
-      const baseEndpoint = this.endpoint.replace(/\/items.*$/, '');
-      const response = await this.client
-        .api(`${baseEndpoint}/root/search(q='${encodeURIComponent(query)}')`)
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async search(query: string): Promise<GraphCollection<DriveItem>> {
+    const searchPath = `../root/search(q='${encodeURIComponent(query)}')`;
+    return await this.query(searchPath).get();
   }
 
   /**
    * 获取缩略图
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async getThumbnails(itemId: string): Promise<unknown[]> {
-    try {
-      const response = await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(itemId)}/thumbnails`)
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async getThumbnails(itemId: string): Promise<GraphCollection<unknown>> {
+    return await this.query(`${encodeURIComponent(itemId)}/thumbnails`).get();
   }
 
   /**
    * 列出权限
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
-  async listPermissions(itemId: string): Promise<unknown[]> {
-    try {
-      const response = await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(itemId)}/permissions`)
-        .get();
-      return response.value || [];
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+  async listPermissions(itemId: string): Promise<GraphCollection<unknown>> {
+    return await this.query(`${encodeURIComponent(itemId)}/permissions`).get();
   }
 
   /**
    * 删除权限
+   * 
+   * 使用 query-builder 支持调试和自定义 header
    */
   async deletePermission(itemId: string, permissionId: string): Promise<void> {
-    try {
-      await this.client
-        .api(`${this.endpoint}/${encodeURIComponent(itemId)}/permissions/${encodeURIComponent(permissionId)}`)
-        .delete();
-    } catch (error) {
-      throw GraphOrmError.fromGraphError(error);
-    }
+    return await this.query(`${encodeURIComponent(itemId)}/permissions`).delete(permissionId);
   }
 }
 
