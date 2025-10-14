@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.16](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.15...v0.1.16) (2025-10-14)
+
+
+### 🐛 Bug Fixes
+
+* **timezone:** setDefaultTimezone return this ([d1ae0a7](https://github.com/qingu-x/msgraph-orm-js/commit/d1ae0a7fead1f916d482b4f42c00f1849553b342))
+
 ### [0.1.15](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.14...v0.1.15) (2025-10-14)
 
 
