@@ -135,7 +135,7 @@ export class EventRepository extends GraphRepository<Event> {
   ): Promise<GraphCollection<Event>> {
     return await this.query(`${encodeURIComponent(eventId)}/instances`)
       .where('start/dateTime', 'ge', '\'' + startDateTime + '\'')
-      .and('end/dateTime', 'le', '\'' + endDateTime + '\'').get();
+      .and('end/dateTime', 'le', '\'' + endDateTime + '\'').get() as GraphCollection<Event>;
   }
 
   /**
@@ -144,7 +144,7 @@ export class EventRepository extends GraphRepository<Event> {
    * 使用 query-builder 支持调试和自定义 header
    */
   async getAttachments(eventId: string): Promise<GraphCollection<unknown>> {
-    return await this.query(`${encodeURIComponent(eventId)}/attachments`).get();
+    return await this.query(`${encodeURIComponent(eventId)}/attachments`).get() as GraphCollection<unknown>;
   }
 
   /**

@@ -37,7 +37,7 @@ export class DriveItemRepository extends GraphRepository<DriveItem> {
       ? 'root/children'
       : `${encodeURIComponent(itemId)}/children`;
     
-    return await this.query(path).get();
+    return await this.query(path).get() as GraphCollection<DriveItem>;
   }
 
   /**
@@ -97,7 +97,7 @@ export class DriveItemRepository extends GraphRepository<DriveItem> {
    */
   async search(query: string): Promise<GraphCollection<DriveItem>> {
     const searchPath = `../root/search(q='${encodeURIComponent(query)}')`;
-    return await this.query(searchPath).get();
+    return await this.query(searchPath).get() as GraphCollection<DriveItem>;
   }
 
   /**
@@ -106,7 +106,7 @@ export class DriveItemRepository extends GraphRepository<DriveItem> {
    * 使用 query-builder 支持调试和自定义 header
    */
   async getThumbnails(itemId: string): Promise<GraphCollection<unknown>> {
-    return await this.query(`${encodeURIComponent(itemId)}/thumbnails`).get();
+    return await this.query(`${encodeURIComponent(itemId)}/thumbnails`).get() as GraphCollection<unknown>;
   }
 
   /**
@@ -115,7 +115,7 @@ export class DriveItemRepository extends GraphRepository<DriveItem> {
    * 使用 query-builder 支持调试和自定义 header
    */
   async listPermissions(itemId: string): Promise<GraphCollection<unknown>> {
-    return await this.query(`${encodeURIComponent(itemId)}/permissions`).get();
+    return await this.query(`${encodeURIComponent(itemId)}/permissions`).get() as GraphCollection<unknown>;
   }
 
   /**

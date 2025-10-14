@@ -512,12 +512,11 @@ export class GraphQueryBuilder<T = unknown> implements QueryBuilder<T> {
    * @throws GraphOrmError 没有找到结果时抛出 NO_ENTITY_FOUND 错误
    */
   async first(): Promise<T | null> {
-    this.top(1);
     const response = await this.get();
-    const result =  response.data?.length === 1 ? response.data[0] : null;
+    const result =  response.data.length > 0 ? response.data[0] : null;
     this.debugInfo!.response = result;
     return result;
-  }
+  } 
 
   /**
    * 执行查询并自动处理分页，返回异步迭代器
@@ -544,12 +543,12 @@ export class GraphQueryBuilder<T = unknown> implements QueryBuilder<T> {
         
         if (isFirstPage) {
           // 第一页：使用当前的查询参数
-          result = await this.get();
+          result = await this.get() as GraphCollection<T>;
           isFirstPage = false;
         } else if (nextLink) {
           // 后续页：使用 nextLink
           this.endpoint = nextLink;
-          result = await this.get();
+          result = await this.get() as GraphCollection<T>;
         } else {
           // 没有更多数据
           break;
@@ -585,7 +584,10 @@ export class GraphQueryBuilder<T = unknown> implements QueryBuilder<T> {
   async findById(id: string): Promise<T | null> {
     try {
       this.endpoint = `${this.endpoint}/${encodeURIComponent(id)}`;
-      const response = await this.first();
+      const request = this.buildRequest();
+      this.debugInfo!.method = 'GET';
+      const response = await request.get();
+      this.debugInfo!.response = response;
       return response;
     } catch (error) {
       throw GraphOrmError.fromGraphError(error);

@@ -104,7 +104,7 @@ export class MessageRepository extends GraphRepository<Message> {
    */
   async getAttachments(messageId: string): Promise<GraphCollection<Attachment>> {
     const queryBuilder = new GraphQueryBuilder<Attachment>(this.client, `${this.endpoint}/${encodeURIComponent(messageId)}/attachments`);
-    return await queryBuilder.get();
+    return await queryBuilder.get() as GraphCollection<Attachment>;
   }
 
   /**

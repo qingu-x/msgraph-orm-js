@@ -66,7 +66,7 @@ export abstract class GraphRepository<T extends GraphEntity> implements EntityMa
           queryBuilder.where(condition.field, condition.operator, condition.value);
         });
       }
-      const result = await queryBuilder.count().get();
+      const result = await queryBuilder.count().get() as GraphCollection<T>;
       return result;
     } catch (error) {
       throw GraphOrmError.fromGraphError(error);

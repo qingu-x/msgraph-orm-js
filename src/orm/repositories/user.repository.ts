@@ -143,7 +143,7 @@ export class UserRepository extends GraphRepository<User> {
    */
   async getLicenses(userId: string): Promise<GraphCollection<LicenseDetails>> {
     const queryBuilder = new GraphQueryBuilder<LicenseDetails>(this.client, `${this.endpoint}/${encodeURIComponent(userId)}/licenseDetails`);
-    return await queryBuilder.get();
+    return await queryBuilder.get() as GraphCollection<LicenseDetails>;
   }
 
   /**

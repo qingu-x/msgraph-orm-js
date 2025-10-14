@@ -56,7 +56,7 @@ export class CalendarService {
    * 使用 query-builder 支持调试和自定义 header
    */
   async getCalendars(userId: string): Promise<GraphCollection<Calendar>> {
-    return await this.query<Calendar>(`users/${encodeURIComponent(userId)}/calendars`).get();
+    return await this.query<Calendar>(`users/${encodeURIComponent(userId)}/calendars`).get() as GraphCollection<Calendar>;
   }
 
   /**
@@ -74,7 +74,7 @@ export class CalendarService {
    * 使用 query-builder 支持调试和自定义 header
    */
   async getCalendarGroups(userId: string): Promise<GraphCollection<CalendarGroup>> {
-    return await this.query<CalendarGroup>(`users/${encodeURIComponent(userId)}/calendarGroups`).get();
+    return await this.query<CalendarGroup>(`users/${encodeURIComponent(userId)}/calendarGroups`).get() as GraphCollection<CalendarGroup>;
   }
 
   /**
@@ -91,7 +91,7 @@ export class CalendarService {
     return await this.query<Event>(`users/${encodeURIComponent(userId)}/calendar/calendarView`,)
     .where('start/dateTime', 'ge', '\'' + startDateTime + '\'')
     .where('end/dateTime', 'le', '\'' + endDateTime + '\'') 
-    .get();
+    .get() as GraphCollection<Event>;
   }
 
   /**
@@ -148,7 +148,7 @@ export class CalendarService {
    * 使用 query-builder 支持调试和自定义 header
    */
   async getRooms(): Promise<GraphCollection<Room>> {
-    return await this.query<Room>('places/microsoft.graph.room').get();
+    return await this.query<Room>('places/microsoft.graph.room').get() as GraphCollection<Room>;
   }
 
   /**
