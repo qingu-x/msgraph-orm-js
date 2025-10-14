@@ -461,9 +461,7 @@ export class GraphQueryBuilder<T = unknown> implements QueryBuilder<T> {
       }
       
       // 添加自定义请求头
-      Object.entries(headers).forEach(([key, value]) => {
-        request = request.header(key, value);
-      });
+      request.headers(headers);
       
       // 添加查询参数
       if (Object.keys(params).length > 0) {
@@ -472,7 +470,7 @@ export class GraphQueryBuilder<T = unknown> implements QueryBuilder<T> {
       this.debugInfo = {
         method: 'GET',
         params,
-        headers: headers,
+        headers,
         url: this.endpoint
       };
       
@@ -588,9 +586,7 @@ export class GraphQueryBuilder<T = unknown> implements QueryBuilder<T> {
   async findById(id: string): Promise<T | null> {
     try {
       this.endpoint = `${this.endpoint}/${encodeURIComponent(id)}`;
-      this.debugInfo!.method = 'GET';
       const response = await this.first();
-      this.debugInfo!.response = response;
       return response;
     } catch (error) {
       throw GraphOrmError.fromGraphError(error);
