@@ -25,8 +25,9 @@ export class EventRepository extends GraphRepository<Event> {
    * 
    * @param timeZone IANA 时区名称，如 'Asia/Shanghai', 'America/New_York', 'UTC'
    */
-  setDefaultTimeZone(timeZone: string): void {
+  setDefaultTimeZone(timeZone: string): this {
     this.defaultTimeZone = timeZone;
+    return this;
   }
 
   /**

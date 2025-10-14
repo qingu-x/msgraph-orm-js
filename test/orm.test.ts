@@ -34,8 +34,8 @@ test('ORM 调试示例', () => {
   
   // 3. 带自定义 Headers 的查询调试
   const customQuery = orm.users.query()
-    .header('ConsistencyLevel', 'eventual')
-    .header('Prefer', 'outlook.timezone="Asia/Shanghai"')
+    .addHeader('ConsistencyLevel', 'eventual')
+    .addHeader('Prefer', 'outlook.timezone="Asia/Shanghai"')
     .where('displayName', 'startswith', '张');
   
   const customDebugInfo = customQuery.getDebug();
