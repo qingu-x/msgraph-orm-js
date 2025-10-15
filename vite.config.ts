@@ -48,7 +48,9 @@ export default defineConfig({
           '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js': 'MicrosoftGraphAuthProviders',
           '@microsoft/microsoft-graph-types': 'MicrosoftGraphTypes',
           'https-proxy-agent': 'HttpsProxyAgent'
-        }
+        },
+        // 明确指定UMD格式的配置
+        format: 'umd'
       }
     },
     sourcemap: true,
@@ -77,26 +79,49 @@ export default defineConfig({
           const content = readFileSync(browserBundlePath, 'utf-8');
           console.log('Read browser bundle content, length:', content.length);
           
-          // 强制执行修复
-          console.log('Adding IIFE structure to browser bundle...');
-          // 移除可能存在的部分IIFE结构和source mapping URL
+          // 始终执行修复以确保正确的结构
+          console.log('Fixing browser bundle structure...');
+          // 清理内容，移除可能的错误结构
           let cleanContent = content.trim();
+          
+          // 如果内容以IIFE开头，需要提取内部内容
           if (cleanContent.startsWith('!function(')) {
-            // 如果已经有部分IIFE结构，尝试移除它
-            const iifeStart = cleanContent.indexOf('{"use strict";');
-            if (iifeStart > 0) {
-              cleanContent = cleanContent.substring(iifeStart + 13); // 跳过{"use strict";
+            // 查找"use strict"的位置
+            const useStrictIndex = cleanContent.indexOf('"use strict";');
+            if (useStrictIndex > 0) {
+              // 提取"use strict";之后的内容
+              cleanContent = cleanContent.substring(useStrictIndex + 13);
+            } else {
+              // 查找模块主体内容的开始位置
+              const moduleBodyStart = cleanContent.indexOf('{');
+              if (moduleBodyStart > 0) {
+                // 找到第一个{之后的内容
+                const actualContentStart = cleanContent.indexOf('"use strict";', moduleBodyStart);
+                if (actualContentStart > 0) {
+                  cleanContent = cleanContent.substring(actualContentStart + 13);
+                } else {
+                  // 尝试查找var关键字作为内容开始
+                  const varStart = cleanContent.indexOf('var ', moduleBodyStart);
+                  if (varStart > 0) {
+                    cleanContent = cleanContent.substring(varStart);
+                  }
+                }
+              }
             }
           }
-          // 移除source mapping URL
-          cleanContent = cleanContent.replace(/;\s*\/\/#\s*sourceMappingURL=bundle\.browser\.js\.map\s*$/, '');
           
-          // 添加完整的 IIFE 包装
+          // 确保清理掉末尾的source mapping URL和任何多余的括号
+          cleanContent = cleanContent.replace(/;\s*\/\/#\s*sourceMappingURL=bundle\.browser\.js\.map\s*$/, '');
+          cleanContent = cleanContent.replace(/\s*}\);\s*$/, ''); // 移除可能的结尾括号
+          cleanContent = cleanContent.replace(/\n*$/, ''); // 移除末尾的换行符
+          
+          // 构建正确的IIFE结构，包含source mapping URL
           const fixedContent = `!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?t(exports,require("@azure/identity"),require("@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js"),require("https-proxy-agent"),require("@microsoft/microsoft-graph-client")):"function"==typeof define&&define.amd?define(["exports","@azure/identity","@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js","https-proxy-agent","@microsoft/microsoft-graph-client"],t):t((e="undefined"!=typeof globalThis?globalThis:e||self).MSGRAPH_ORM_JS={},e.AzureIdentity,e.MicrosoftGraphAuthProviders,e.HttpsProxyAgent,e.MicrosoftGraph)}(this,function(e,t,s,r,n){"use strict";` + 
             cleanContent + 
             `;return e;});\n//# sourceMappingURL=bundle.browser.js.map`;
+            
           writeFileSync(browserBundlePath, fixedContent);
-          console.log('Fixed browser bundle with IIFE structure');
+          console.log('Fixed browser bundle with correct IIFE structure');
         } catch (error) {
           console.error('Failed to fix browser bundle:', error);
         }

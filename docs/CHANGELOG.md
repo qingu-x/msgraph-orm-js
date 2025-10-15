@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.21](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.20...v0.1.21) (2025-10-15)
+
+
+### 📦 Build System
+
+* **vite:** fix-browser-bundle ([54a26a0](https://github.com/qingu-x/msgraph-orm-js/commit/54a26a03c0570f7149370fdb9f5f8507d47aab29))
+
 ### [0.1.20](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.19...v0.1.20) (2025-10-14)
 
 
