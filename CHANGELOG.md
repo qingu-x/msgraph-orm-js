@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.24](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.23...v0.1.24) (2025-10-15)
+
+
+### 🐛 Bug Fixes
+
+* **proxy:** rm https-proxy-agent for browser ([f7b883f](https://github.com/qingu-x/msgraph-orm-js/commit/f7b883f94458194732199cfd079d8aeceae43532))
+
 ### [0.1.23](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.22...v0.1.23) (2025-10-15)
 
 
