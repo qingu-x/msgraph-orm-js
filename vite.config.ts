@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import { resolve } from 'path'
 import dts from 'vite-plugin-dts'
 import { builtinModules } from 'module'
-import { writeFileSync, readFileSync } from 'fs'
 
 export default defineConfig({
   build: {

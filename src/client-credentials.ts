@@ -1,6 +1,6 @@
 import { ClientSecretCredential, ClientSecretCredentialOptions } from '@azure/identity';
 import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js';
-import { Client } from '@microsoft/microsoft-graph-client';
+import { AuthProvider, Client } from '@microsoft/microsoft-graph-client';
 import { Endpoints } from './types';
 
 // 动态导入 https-proxy-agent，仅在 Node.js 环境中使用
@@ -26,13 +26,13 @@ export interface ClientParams {
 export class GraphClient<T> {
   private credential: ClientSecretCredential;
   private graphClient!: Client;
-  private authProvider: TokenCredentialAuthenticationProvider;
+  private authProvider: TokenCredentialAuthenticationProvider | AuthProvider;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private proxyAgent: any | undefined;
   private meetings: T[] = [];
   private endpoints: Endpoints;
 
-  constructor(params: ClientParams, endpoints: Endpoints) {
+  constructor(params: ClientParams, endpoints: Endpoints, token?: string) {
     this.endpoints = endpoints;
     this.credential = new ClientSecretCredential(
       params.tenantId,
@@ -45,7 +45,14 @@ export class GraphClient<T> {
     );
 
     // 客户端凭据流使用 /.default scope
-    this.authProvider = new TokenCredentialAuthenticationProvider(this.credential, {
+    this.authProvider = token ? async (done) => {
+      try {
+        done(null, token);
+      } catch (error) {
+        console.error('Auth provider error:', error);
+        done(error, null);
+      }
+    } : new TokenCredentialAuthenticationProvider(this.credential, {
       scopes: [this.endpoints.graph + '/.default'],
     });
 
@@ -70,8 +77,7 @@ export class GraphClient<T> {
         agent: this.proxyAgent,
       };
     }
-    
-    this.graphClient = Client.initWithMiddleware(config);
+    this.graphClient = this.authProvider instanceof TokenCredentialAuthenticationProvider ? Client.initWithMiddleware(config) : Client.init(config);
   }
 
   // 规范化查询对象：移除 undefined，将 boolean 转为字符串
@@ -100,6 +106,18 @@ export class GraphClient<T> {
     this.proxyAgent = params.options?.proxyOptions && HttpsProxyAgent
       ? new HttpsProxyAgent("http://" + params.options.proxyOptions.host + ":" + params.options.proxyOptions.port) 
       : undefined;
+    this.generateGraphClient();
+  }
+
+  public updateToken(token: string) {
+    this.authProvider = async (done) => {
+      try {
+        done(null, token);
+      } catch (error) {
+        console.error('Auth provider error:', error);
+        done(error, null);
+      }
+    };
     this.generateGraphClient();
   }
 
