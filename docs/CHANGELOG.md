@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.23](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.22...v0.1.23) (2025-10-15)
+
+
+### 📦 Build System
+
+* **vite:** es2015 ([89ae003](https://github.com/qingu-x/msgraph-orm-js/commit/89ae0038a96cc5cc587cd65b04668fdbf46ef31c))
+
 ### [0.1.22](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.21...v0.1.22) (2025-10-15)
 
 

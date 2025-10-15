@@ -1,8 +1,20 @@
 import { ClientSecretCredential, ClientSecretCredentialOptions } from '@azure/identity';
 import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js';
-import { HttpsProxyAgent } from 'https-proxy-agent';
 import { Client } from '@microsoft/microsoft-graph-client';
 import { Endpoints } from './types';
+
+// 动态导入 https-proxy-agent，仅在 Node.js 环境中使用
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let HttpsProxyAgent: any;
+if (typeof window === 'undefined') {
+  // Node.js 环境
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    HttpsProxyAgent = require('https-proxy-agent').HttpsProxyAgent;
+  } catch {
+    // 如果导入失败，忽略
+  }
+}
 
 export interface ClientParams {
   tenantId: string;
@@ -15,7 +27,8 @@ export class GraphClient<T> {
   private credential: ClientSecretCredential;
   private graphClient!: Client;
   private authProvider: TokenCredentialAuthenticationProvider;
-  private proxyAgent: HttpsProxyAgent<string> | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private proxyAgent: any | undefined;
   private meetings: T[] = [];
   private endpoints: Endpoints;
 
@@ -36,8 +49,8 @@ export class GraphClient<T> {
       scopes: [this.endpoints.graph + '/.default'],
     });
 
-    // 创建 HTTPS 代理代理
-    this.proxyAgent = params.options?.proxyOptions 
+    // 创建 HTTPS 代理（仅在 Node.js 环境中）
+    this.proxyAgent = params.options?.proxyOptions && HttpsProxyAgent
       ? new HttpsProxyAgent("http://" + params.options.proxyOptions.host + ":" + params.options.proxyOptions.port) 
       : undefined;
 
@@ -45,13 +58,20 @@ export class GraphClient<T> {
   }
 
   private generateGraphClient() {
-    this.graphClient = Client.initWithMiddleware({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const config: any = {
       authProvider: this.authProvider,
       baseUrl: this.endpoints.graph,
-      fetchOptions: {
+    };
+    
+    // 仅在 Node.js 环境且有代理时添加 fetchOptions
+    if (this.proxyAgent) {
+      config.fetchOptions = {
         agent: this.proxyAgent,
-      },
-    });
+      };
+    }
+    
+    this.graphClient = Client.initWithMiddleware(config);
   }
 
   // 规范化查询对象：移除 undefined，将 boolean 转为字符串
@@ -76,7 +96,8 @@ export class GraphClient<T> {
         ...params.options,
       }
     );
-    this.proxyAgent = params.options?.proxyOptions 
+    // 创建 HTTPS 代理（仅在 Node.js 环境中）
+    this.proxyAgent = params.options?.proxyOptions && HttpsProxyAgent
       ? new HttpsProxyAgent("http://" + params.options.proxyOptions.host + ":" + params.options.proxyOptions.port) 
       : undefined;
     this.generateGraphClient();
