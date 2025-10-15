@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import { resolve } from 'path'
 import dts from 'vite-plugin-dts'
 import { builtinModules } from 'module'
+import { writeFileSync, readFileSync } from 'fs'
 
 export default defineConfig({
   build: {
@@ -24,8 +25,6 @@ export default defineConfig({
           '@azure/identity',
           '@microsoft/microsoft-graph-client',
           '@microsoft/microsoft-graph-types',
-          'ky',
-          'debug',
           'https-proxy-agent',  // Node.js 专用代理包
           'agent-base'          // https-proxy-agent 的依赖
         ]
@@ -48,18 +47,7 @@ export default defineConfig({
           '@microsoft/microsoft-graph-client': 'MicrosoftGraph',
           '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js': 'MicrosoftGraphAuthProviders',
           '@microsoft/microsoft-graph-types': 'MicrosoftGraphTypes',
-          'ky': 'ky',
-          'debug': 'debug',
           'https-proxy-agent': 'HttpsProxyAgent'
-        },
-        footer: (chunk) => {
-          if (chunk.name === 'index') {
-            return `
-            if(typeof window !== 'undefined') {
-              window._msgraph_orm_js_version_ = '0.0.1'
-            }`
-          }
-          return ''
         }
       }
     },
@@ -78,7 +66,42 @@ export default defineConfig({
       copyDtsFiles: true,
       include: ['src/**/*'],
       exclude: ['test/**/*', 'node_modules/**/*']
-    })
+    }),
+    {
+      name: 'fix-browser-bundle',
+      closeBundle() {
+        console.log('Running fix-browser-bundle plugin...');
+        // 修复浏览器打包文件，添加正确的 IIFE 结构
+        const browserBundlePath = resolve(__dirname, 'lib/bundle.browser.js');
+        try {
+          const content = readFileSync(browserBundlePath, 'utf-8');
+          console.log('Read browser bundle content, length:', content.length);
+          
+          // 强制执行修复
+          console.log('Adding IIFE structure to browser bundle...');
+          // 移除可能存在的部分IIFE结构和source mapping URL
+          let cleanContent = content.trim();
+          if (cleanContent.startsWith('!function(')) {
+            // 如果已经有部分IIFE结构，尝试移除它
+            const iifeStart = cleanContent.indexOf('{"use strict";');
+            if (iifeStart > 0) {
+              cleanContent = cleanContent.substring(iifeStart + 13); // 跳过{"use strict";
+            }
+          }
+          // 移除source mapping URL
+          cleanContent = cleanContent.replace(/;\s*\/\/#\s*sourceMappingURL=bundle\.browser\.js\.map\s*$/, '');
+          
+          // 添加完整的 IIFE 包装
+          const fixedContent = `!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?t(exports,require("@azure/identity"),require("@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js"),require("https-proxy-agent"),require("@microsoft/microsoft-graph-client")):"function"==typeof define&&define.amd?define(["exports","@azure/identity","@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js","https-proxy-agent","@microsoft/microsoft-graph-client"],t):t((e="undefined"!=typeof globalThis?globalThis:e||self).MSGRAPH_ORM_JS={},e.AzureIdentity,e.MicrosoftGraphAuthProviders,e.HttpsProxyAgent,e.MicrosoftGraph)}(this,function(e,t,s,r,n){"use strict";` + 
+            cleanContent + 
+            `;return e;});\n//# sourceMappingURL=bundle.browser.js.map`;
+          writeFileSync(browserBundlePath, fixedContent);
+          console.log('Fixed browser bundle with IIFE structure');
+        } catch (error) {
+          console.error('Failed to fix browser bundle:', error);
+        }
+      }
+    }
   ],
   resolve: {
     alias: {
