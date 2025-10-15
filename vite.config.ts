@@ -58,8 +58,20 @@ export default defineConfig({
     terserOptions: {
       compress: {
         drop_console: false,
+        // 确保可选链操作符被正确转换
+        ecma: 2015
+      },
+      mangle: {
+        // 保持类名和方法名不被混淆，确保兼容性
+        keep_classnames: true,
+        keep_fnames: true
+      },
+      format: {
+        // 确保输出兼容性
+        ecma: 2015
       }
-    }
+    },
+    target: 'es2015'
   },
   plugins: [
     dts({
@@ -68,65 +80,7 @@ export default defineConfig({
       copyDtsFiles: true,
       include: ['src/**/*'],
       exclude: ['test/**/*', 'node_modules/**/*']
-    }),
-    {
-      name: 'fix-browser-bundle',
-      closeBundle() {
-        console.log('Running fix-browser-bundle plugin...');
-        // 修复浏览器打包文件，添加正确的 IIFE 结构
-        const browserBundlePath = resolve(__dirname, 'lib/bundle.browser.js');
-        try {
-          const content = readFileSync(browserBundlePath, 'utf-8');
-          console.log('Read browser bundle content, length:', content.length);
-          
-          // 始终执行修复以确保正确的结构
-          console.log('Fixing browser bundle structure...');
-          // 清理内容，移除可能的错误结构
-          let cleanContent = content.trim();
-          
-          // 如果内容以IIFE开头，需要提取内部内容
-          if (cleanContent.startsWith('!function(')) {
-            // 查找"use strict"的位置
-            const useStrictIndex = cleanContent.indexOf('"use strict";');
-            if (useStrictIndex > 0) {
-              // 提取"use strict";之后的内容
-              cleanContent = cleanContent.substring(useStrictIndex + 13);
-            } else {
-              // 查找模块主体内容的开始位置
-              const moduleBodyStart = cleanContent.indexOf('{');
-              if (moduleBodyStart > 0) {
-                // 找到第一个{之后的内容
-                const actualContentStart = cleanContent.indexOf('"use strict";', moduleBodyStart);
-                if (actualContentStart > 0) {
-                  cleanContent = cleanContent.substring(actualContentStart + 13);
-                } else {
-                  // 尝试查找var关键字作为内容开始
-                  const varStart = cleanContent.indexOf('var ', moduleBodyStart);
-                  if (varStart > 0) {
-                    cleanContent = cleanContent.substring(varStart);
-                  }
-                }
-              }
-            }
-          }
-          
-          // 确保清理掉末尾的source mapping URL和任何多余的括号
-          cleanContent = cleanContent.replace(/;\s*\/\/#\s*sourceMappingURL=bundle\.browser\.js\.map\s*$/, '');
-          cleanContent = cleanContent.replace(/\s*}\);\s*$/, ''); // 移除可能的结尾括号
-          cleanContent = cleanContent.replace(/\n*$/, ''); // 移除末尾的换行符
-          
-          // 构建正确的IIFE结构，包含source mapping URL
-          const fixedContent = `!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?t(exports,require("@azure/identity"),require("@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js"),require("https-proxy-agent"),require("@microsoft/microsoft-graph-client")):"function"==typeof define&&define.amd?define(["exports","@azure/identity","@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js","https-proxy-agent","@microsoft/microsoft-graph-client"],t):t((e="undefined"!=typeof globalThis?globalThis:e||self).MSGRAPH_ORM_JS={},e.AzureIdentity,e.MicrosoftGraphAuthProviders,e.HttpsProxyAgent,e.MicrosoftGraph)}(this,function(e,t,s,r,n){"use strict";` + 
-            cleanContent + 
-            `;return e;});\n//# sourceMappingURL=bundle.browser.js.map`;
-            
-          writeFileSync(browserBundlePath, fixedContent);
-          console.log('Fixed browser bundle with correct IIFE structure');
-        } catch (error) {
-          console.error('Failed to fix browser bundle:', error);
-        }
-      }
-    }
+    })
   ],
   resolve: {
     alias: {
