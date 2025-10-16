@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.26](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.25...v0.1.26) (2025-10-16)
+
+
+### ✨ Features
+
+* **client:** add token ([ef1da10](https://github.com/qingu-x/msgraph-orm-js/commit/ef1da109c145bd31430e99913e0e39f6ce73d9fe))
+
 ### [0.1.25](https://github.com/qingu-x/msgraph-orm-js/compare/v0.1.24...v0.1.25) (2025-10-15)
 
 
